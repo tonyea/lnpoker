@@ -2,3 +2,5 @@ npm-debug.log
 .idea
 node_modules
 game-server/logs
+game-server/package-lock.json
+web-sever/package-lock.json
