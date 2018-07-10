@@ -4,12 +4,17 @@
   "description": "Texas Holdem poker game server",
   "version": "0.0.1",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vampserv/node-poker-stack"
+  },
+  "license": "MIT",
   "dependencies": {
-    "pomelo": "~1.0.0",
-    "crc": "0.2.0",
+    "pomelo": "^2.2.5",
+    "crc": "^3.5.0",
     "hoyle": "^0.2.2",
-    "node-uuid": "^1.4.1",
-    "pomelo-logger": "^0.1.6",
-    "redis": "^0.12.1"
+    "uuid": "^3.3.2",
+    "pomelo-logger": "^0.1.7",
+    "redis": "^2.8.0"
   }
 }
