@@ -3,4 +3,4 @@ npm-debug.log
 node_modules
 game-server/logs
 game-server/package-lock.json
-web-sever/package-lock.json
+web-server/package-lock.json
