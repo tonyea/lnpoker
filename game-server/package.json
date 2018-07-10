@@ -1,12 +1,12 @@
 {
-  "author": "Edward Yang",
-  "name": "poker-game-stack-server",
+  "author": "Michael Bell",
+  "name": "node-poker",
   "description": "Texas Holdem poker game server",
   "version": "0.0.1",
-  "private": false,
+  "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/vampserv/node-poker-stack"
+    "url": "https://github.com/mjhbell/node-poker"
   },
   "license": "MIT",
   "dependencies": {
