@@ -3,18 +3,26 @@ var app = express();
 var bodyParser = require("body-parser");
 var errorhandler = require("errorhandler");
 
-// app.use(express.methodOverride());
-app.use(bodyParser);
-app.set("view engine", "jade");
-app.set("views", __dirname + "/public");
+// get environment variables
+require("dotenv").config();
+var env = process.env.NODE_ENV;
+
+// app.use(express.methodOverride()); // would have been used to allow usage of HTTP verbs like PUT or DELETE in clients (browsers) that don't support it
+
+app.use(express.json()); // bodyparser middleware parses body into req.body
+app.use(
+  express.urlencoded({
+    extended: true
+  })
+); // bodyparser like middleware parses incoming request uri into urlencoded
+app.set("view engine", "pug"); // using the pug(jade) templating engine
+app.set("views", __dirname + "/public"); // don't know if this is being used
 app.set("view options", { layout: false });
 app.set("basepath", __dirname + "/public");
 
-var env = process.env.NODE_ENV || "development";
-
+// if in development
 if ("development" == env) {
-  // configure stuff here
-  app.use(express.static(__dirname + "/public"));
+  app.use(express.static(__dirname + "/public")); // serve static html css
   app.use(errorhandler({ dumpExceptions: true, showStack: true }));
 }
 
