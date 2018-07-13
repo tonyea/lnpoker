@@ -2,14 +2,16 @@
   "name": "poker-back-end",
   "version": "1.0.0",
   "description": "Back end node server for LN Poker",
-  "main": "index.js",
+  "main": "server.js",
   "private": true,
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "watch": "jest --watch",
+    "server": "nodemon server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tonyea/node-poker.git"
+    "url": "https://github.com/tonyea/node-poker.git"
   },
   "author": "Anthony Ebin",
   "license": "ISC",
@@ -28,6 +30,7 @@
     "validator": "^10.4.0"
   },
   "devDependencies": {
-    "jest": "^23.4.0"
+    "jest": "^23.4.0",
+    "nodemon": "^1.18.1"
   }
 }
