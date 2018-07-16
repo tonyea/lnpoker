@@ -40,7 +40,7 @@ describe("User MVC test", () => {
   /**  
     Client browser hits api/users/register with POST requets and form filled with a username, password and password 2. API returns user profile
   **/
-  describe("Test register route", () => {
+  describe("User Registration", () => {
     const testusername = "testees";
 
     test("It should respond with valid POST method", () => {
@@ -78,11 +78,45 @@ describe("User MVC test", () => {
     });
   });
 
-  // Client browser hits api/users/register with POST requets and form filled with special char username, password or password 2. API returns error
+  // Client browser hits api/users/register with POST request and form filled with special char username, password or password 2. API returns error
+  describe("Test bad registrations", () => {
+    const testusername = "Test User";
+    const testpassword = "password";
+    // bad usernames should return errors
+    test("Bad usernames", () => {
+      expect.assertions(2);
+      return request(app)
+        .post("/api/users/register")
+        .send({
+          name: testusername,
+          password: testpassword,
+          password2: testpassword
+        })
+        .then(res => {
+          // check to see if response is bad
+          expect(res.statusCode).toBe(400);
 
-  // Check that the password is hashed
+          // return error message
+          expect(res.body.username).toContain("characters");
+        });
+    });
 
-  //  Client browser hits api/users/register with POST requets and form filled with a mismatched password and password 2. API returns error.
+    // check that bad usernames are not persisted
 
-  //  Client browser hits api/users/register with POST requets and form filled with a preexisting username. API returns error.
+    // Check that the password is hashed
+    test("Password should be hashed when persisted", () => {});
+
+    //  Client browser hits api/users/register with POST requets and form filled with a mismatched password and password 2. API returns error.
+    test("Password 1 and 2 must match", () => {});
+
+    //  Client browser hits api/users/register with POST requets and form filled with a preexisting username. API returns error.
+    test("No duplicate usernames allowed", () => {});
+  });
+
+  // Client browser hits api/users/login with POST request and form filled with username and password. API returns user
+  describe("User login", () => {
+    test("User found", () => {});
+    test("User not found", () => {});
+    test("Wrong password", () => {});
+  });
 });

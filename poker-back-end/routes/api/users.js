@@ -2,10 +2,20 @@ const express = require("express");
 const router = express.Router();
 const User = require("../../models/User");
 
+// Load input validation
+const validateRegisterInput = require("../../validation/register");
+
 // @route   POST api/users/register
 // @desc    Register user
 // @access  Public
 router.post("/register", (req, res) => {
+  // return 400 if errors
+  const { errors, isValid } = validateRegisterInput(req.body);
+
+  if (!isValid) {
+    return res.status(400).json(errors);
+  }
+
   // if user doesn't exist, add him to DB
 
   // create user
