@@ -157,7 +157,38 @@ describe("User MVC test", () => {
 
   // Client browser hits api/users/login with POST request and form filled with username and password. API returns user
   describe("User login", () => {
-    test("User found", () => {});
+    const testusername = "loginusername";
+    const testpassword = "loginpassword";
+
+    // create user before all login tests are executed
+    beforeAll(() => {
+      return request(app)
+        .post("/api/users/register")
+        .send({
+          name: testusername,
+          password: testpassword,
+          password2: testpassword
+        });
+    });
+
+    test("User found", () => {
+      expect.assertions(2);
+
+      return request(app)
+        .post("/api/users/login")
+        .send({
+          name: testusername,
+          password: testpassword
+        })
+        .then(res => {
+          // check to see if response is bad
+          expect(res.statusCode).toBe(200);
+
+          // return error message
+          expect(res.body.success).toBe(true);
+        });
+    });
+
     test("User not found", () => {});
     test("Wrong password", () => {});
   });
