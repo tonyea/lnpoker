@@ -189,7 +189,40 @@ describe("User MVC test", () => {
         });
     });
 
-    test("User not found", () => {});
-    test("Wrong password", () => {});
+    test("Password incorrect", () => {
+      expect.assertions(2);
+
+      return request(app)
+        .post("/api/users/login")
+        .send({
+          name: testusername,
+          password: "wrongpass"
+        })
+        .then(res => {
+          // check to see if response is bad
+          expect(res.statusCode).toBe(400);
+
+          // return error message
+          expect(res.body.password).toContain("Password incorrect");
+        });
+    });
+
+    test("User not found", () => {
+      expect.assertions(2);
+
+      return request(app)
+        .post("/api/users/login")
+        .send({
+          name: "wronguser",
+          password: testpassword
+        })
+        .then(res => {
+          // check to see if response is bad
+          expect(res.statusCode).toBe(404);
+
+          // return error message
+          expect(res.body.username).toContain("not found");
+        });
+    });
   });
 });
