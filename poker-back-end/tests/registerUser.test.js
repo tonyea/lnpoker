@@ -42,6 +42,7 @@ describe("User MVC test", () => {
   **/
   describe("User Registration", () => {
     const testusername = "testees";
+    const testpassword = "password";
 
     test("It should respond with valid POST method", () => {
       expect.assertions(2);
@@ -49,41 +50,38 @@ describe("User MVC test", () => {
         .post("/api/users/register")
         .send({
           name: testusername,
-          password: "password",
-          password2: "password"
+          password: testpassword,
+          password2: testpassword
         })
         .then(res => {
           // check to see if response is ok
           expect(res.statusCode).toBe(200);
 
           // check to see if profiled data is returned
-          expect(res.body).toEqual(
-            expect.objectContaining({
-              name: testusername,
-              password: "password"
-            })
-          );
+          expect(res.body.name).toEqual(testusername);
           // console.log(res.body);
         });
     });
 
     // check to see if profile data is persisted to DB
     test("DB should have persisted user", () => {
-      expect.assertions(1);
-      return User.findOne({ name: testusername })
-        .then(user => {
-          expect(user.name).toEqual(testusername);
-        })
-        .catch(err => console.log(err));
+      expect.assertions(2);
+      return User.findOne({ name: testusername }).then(user => {
+        expect(user.name).toEqual(testusername);
+
+        // Check that the password is not same plaintext
+        expect(user.password).not.toBe(testpassword);
+      });
     });
   });
 
   // Client browser hits api/users/register with POST request and form filled with special char username, password or password 2. API returns error
   describe("Test bad registrations", () => {
-    const testusername = "Test User";
-    const testpassword = "password";
     // bad usernames should return errors
     test("Bad usernames", () => {
+      const testusername = "Test User&*%";
+      const testpassword = "password";
+
       expect.assertions(2);
       return request(app)
         .post("/api/users/register")
@@ -101,16 +99,60 @@ describe("User MVC test", () => {
         });
     });
 
-    // check that bad usernames are not persisted
-
-    // Check that the password is hashed
-    test("Password should be hashed when persisted", () => {});
-
     //  Client browser hits api/users/register with POST requets and form filled with a mismatched password and password 2. API returns error.
-    test("Password 1 and 2 must match", () => {});
+    test("Password 1 and 2 must match", () => {
+      const testusername = "gooduser";
+      const testpassword = "password";
+
+      expect.assertions(2);
+      return request(app)
+        .post("/api/users/register")
+        .send({
+          name: testusername,
+          password: testpassword,
+          password2: "randomxyz"
+        })
+        .then(res => {
+          // check to see if response is bad
+          expect(res.statusCode).toBe(400);
+
+          // return error message
+          expect(res.body.password2).toContain("match");
+        });
+    });
 
     //  Client browser hits api/users/register with POST requets and form filled with a preexisting username. API returns error.
-    test("No duplicate usernames allowed", () => {});
+    test("No duplicate usernames allowed", () => {
+      const duplicateuser = "gooduser";
+      const testpassword = "password";
+
+      expect.assertions(2);
+
+      // creating duplicate users with nested promises
+      return request(app)
+        .post("/api/users/register")
+        .send({
+          name: duplicateuser,
+          password: testpassword,
+          password2: testpassword
+        })
+        .then(res => {
+          return request(app)
+            .post("/api/users/register")
+            .send({
+              name: duplicateuser,
+              password: testpassword,
+              password2: testpassword
+            })
+            .then(res => {
+              // check to see if response is bad
+              expect(res.statusCode).toBe(400);
+
+              // return error message
+              expect(res.body.username).toContain("exists");
+            });
+        });
+    });
   });
 
   // Client browser hits api/users/login with POST request and form filled with username and password. API returns user

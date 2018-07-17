@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../../models/User");
+const bcrypt = require("bcryptjs");
 
 // Load input validation
 const validateRegisterInput = require("../../validation/register");
@@ -17,20 +18,31 @@ router.post("/register", (req, res) => {
   }
 
   // if user doesn't exist, add him to DB
+  User.findOne({ name: req.body.name }).then(user => {
+    if (user) {
+      errors.username = "Username already exists";
 
-  // create user
-  const newUser = new User({
-    name: req.body.name,
-    password: req.body.password
+      return res.status(400).json(errors);
+    } else {
+      // create user
+      const newUser = new User({
+        name: req.body.name,
+        password: req.body.password
+      });
+
+      // hashing passwords
+      bcrypt.genSalt(10, (err, salt) => {
+        bcrypt.hash(newUser.password, salt, (err, hash) => {
+          if (err) throw err;
+          newUser.password = hash;
+          newUser
+            .save()
+            .then(user => res.json(user))
+            .catch(err => console.log(err));
+        });
+      });
+    }
   });
-
-  newUser
-    .save()
-    .then(user => res.json(user))
-    .catch(err => console.log(err));
-
-  // send 200 status and profile data back
-  // return res.status(200).json(req.body);
 });
 
 // @route   GET api/users/:name
