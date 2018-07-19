@@ -14,11 +14,6 @@ module.exports = function validateRegisterInput(data) {
     errors.username = "Username must be between 6 and 30 characters long";
   }
 
-  // username is required
-  if (validator.isEmpty(data.name)) {
-    errors.username = "Username is required";
-  }
-
   // username has no spaces
   // username only has a-z char
   if (!validator.isAlpha(data.name)) {
@@ -26,24 +21,29 @@ module.exports = function validateRegisterInput(data) {
       "Only a-zA-Z characters allowed in username. No spaces either.";
   }
 
+  // username is required
+  if (validator.isEmpty(data.name)) {
+    errors.username = "Username is required";
+  }
+
+  // password has min length
+  if (!validator.isLength(data.password, { min: 6, max: 30 })) {
+    errors.password = "Password must be between 6 and 30 characters long";
+  }
+
   // password is required
   if (validator.isEmpty(data.password)) {
     errors.password = "Password is required";
   }
 
-  // password has min length
-  if (!validator.isLength(data.name, { min: 6, max: 30 })) {
-    errors.username = "Username must be between 6 and 30 characters long";
+  // password must match
+  if (!validator.equals(data.password2, data.password)) {
+    errors.password2 = "Passwords must match";
   }
 
   // password 2 is required
   if (validator.isEmpty(data.password2)) {
-    errors.password2 = "Passwords must match";
-  }
-
-  // password must match
-  if (!validator.equals(data.password2, data.password)) {
-    errors.password2 = "Passwords must match";
+    errors.password2 = "Both passwords are required and must match";
   }
 
   return {

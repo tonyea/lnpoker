@@ -1,8 +1,9 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 
-// get users route file
+// get route files
 const users = require("./routes/api/users");
+const game = require("./routes/api/game");
 
 const app = express();
 
@@ -15,7 +16,8 @@ app.get("/", (req, res) => {
   res.status(200).send("Lightning Poker - Bitcoin on the Lightning Network");
 });
 
-// connect express to user route file
+// connect express to route file
 app.use("/api/users", users);
+app.use("/api/game", game);
 
 module.exports = app;
