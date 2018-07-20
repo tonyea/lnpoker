@@ -1,3 +1,7 @@
 .table-container {
   border: 2px solid red;
 }
+
+.card img {
+  max-width: 100%;
+}
