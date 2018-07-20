@@ -5,3 +5,5 @@ game-server/logs
 game-server/package-lock.json
 web-server/package-lock.json
 original
+package-lock.json
+.env
