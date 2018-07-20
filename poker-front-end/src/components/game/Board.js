@@ -15,7 +15,7 @@ class Board extends Component {
   }
 
   renderCard(cardType) {
-    return <Card value={cardType} />;
+    return <Card card={cardType} />;
   }
   render() {
     return (
