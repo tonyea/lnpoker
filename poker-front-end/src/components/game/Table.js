@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import Board from "./Board";
+import Chat from "./Chat";
 
 class Opponent extends Component {
   render() {
@@ -46,6 +47,8 @@ class Table extends Component {
         <Board />
 
         <Player />
+
+        <Chat />
       </div>
     );
   }
