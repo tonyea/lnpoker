@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import Board from "./Board";
-import Chat from "./Chat";
+import Chat from "../chat/Chat";
 
 class Opponent extends Component {
   render() {
