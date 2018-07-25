@@ -7,25 +7,26 @@ export default class Chat extends Component {
     super(props);
 
     this.state = {
-      chatLog: [
-        {
-          message: "Test Message1",
-          author: "Test Author1",
-          sendDate: "Test Date1"
-        },
-        {
-          message: "Test Message2",
-          author: "Test Author2",
-          sendDate: "Test Date2"
-        }
-      ]
+      chatLog: []
     };
+
+    this.addMessage = this.addMessage.bind(this);
   }
+
+  addMessage(msg, author, timestamp) {
+    this.setState({
+      chatLog: [
+        ...this.state.chatLog,
+        { message: msg, author, sendDate: timestamp }
+      ]
+    });
+  }
+
   render() {
     return (
       <div className="chat container">
         <ChatLog messages={this.state.chatLog} />
-        <ChatInput />
+        <ChatInput addMessage={this.addMessage} />
       </div>
     );
   }
