@@ -17,10 +17,10 @@ export default class ChatInput extends Component {
   }
 
   sendMessage(e) {
-    // clear input
-
     // send message
     this.props.addMessage(this.state.myMsg, "Anthony", Date.now());
+    // clear input
+    this.setState({ myMsg: "" });
   }
 
   render() {
