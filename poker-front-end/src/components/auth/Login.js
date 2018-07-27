@@ -114,6 +114,8 @@ const mapStateToProps = state => ({
   errors: state.errors
 });
 
+// mapping auth and errors state from store to Login component in first argument
+// mapping loginUser dispatch as prop function from store to Login in second argument
 export default connect(
   mapStateToProps,
   { loginUser }

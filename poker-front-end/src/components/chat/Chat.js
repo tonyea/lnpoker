@@ -1,33 +1,39 @@
-import React, { Component } from "react";
+import React from "react";
 import ChatLog from "./ChatLog";
 import ChatInput from "./ChatInput";
+import { connect } from "react-redux";
+import PropTypes from "prop-types";
+import { addMessage } from "../../actions/chatActions";
 
-export default class Chat extends Component {
-  constructor(props) {
-    super(props);
+const Chat = ({ chatLog, dispatchAddMessage }) => {
+  return (
+    <div className="chat container">
+      <ChatLog messages={chatLog} />
+      <ChatInput addMessage={dispatchAddMessage} />
+    </div>
+  );
+};
 
-    this.state = {
-      chatLog: []
-    };
+Chat.propTypes = {
+  chatLog: PropTypes.arrayOf(
+    PropTypes.shape({
+      message: PropTypes.string.isRequired,
+      author: PropTypes.string.isRequired,
+      sendDate: PropTypes.number.isRequired
+    }).isRequired
+  ),
+  dispatchAddMessage: PropTypes.func.isRequired
+};
 
-    this.addMessage = this.addMessage.bind(this);
-  }
+const mapStateToProps = state => ({
+  chatLog: state.chat
+});
 
-  addMessage(msg, author, timestamp) {
-    this.setState({
-      chatLog: [
-        ...this.state.chatLog,
-        { message: msg, author, sendDate: timestamp }
-      ]
-    });
-  }
+const mapDispatchToProps = dispatch => ({
+  dispatchAddMessage: payload => dispatch(addMessage(payload))
+});
 
-  render() {
-    return (
-      <div className="chat container">
-        <ChatLog messages={this.state.chatLog} />
-        <ChatInput addMessage={this.addMessage} />
-      </div>
-    );
-  }
-}
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(Chat);

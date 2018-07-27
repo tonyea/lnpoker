@@ -1,8 +1,10 @@
 import React from "react";
+import PropTypes from "prop-types";
 
-const ChatLog = props => {
+// destructured messages from props.messages
+const ChatLog = ({ messages }) => {
   // Format the chat log to show author and message date
-  const messagesMappedToString = props.messages
+  const messagesMappedToString = messages
     .map(msg => {
       return msg.author + ": " + msg.message;
     })
@@ -22,6 +24,16 @@ const ChatLog = props => {
       />
     </div>
   );
+};
+
+ChatLog.propTypes = {
+  messages: PropTypes.arrayOf(
+    PropTypes.shape({
+      message: PropTypes.string.isRequired,
+      author: PropTypes.string.isRequired,
+      sendDate: PropTypes.number.isRequired
+    }).isRequired
+  )
 };
 
 export default ChatLog;
