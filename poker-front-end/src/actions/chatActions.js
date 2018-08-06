@@ -14,9 +14,9 @@ export const receiveMessages = msgs => ({
 });
 
 // // Thunk to Emit message to socket before dispatching a receive message call to get messages from socket
-export const emitMessage = msg => dispatch => {
+export const emitMessage = msg => {
   socket.emit("message", msg);
-  dispatch(addMessage(msg));
+  // dispatch(addMessage(msg));
   console.log("message emitted to socket");
 };
 
