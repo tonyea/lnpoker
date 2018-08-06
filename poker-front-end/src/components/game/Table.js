@@ -2,11 +2,13 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Chat from "../chat/Chat";
 
-class Opponent extends Component {
-  render() {
-    return <div className="col-sm">One of 5 bots</div>;
-  }
-}
+const Opponent = () => <div className="col-sm">One of 5 bots</div>;
+
+// // class Opponent extends Component {
+// //   render() {
+// //     return <div className="col-sm">One of 5 bots</div>;
+// //   }
+// }
 
 class Opponents extends Component {
   renderOpponent(i) {

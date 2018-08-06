@@ -1,18 +1,30 @@
-import React from "react";
+import React, { Component } from "react";
 import ChatLog from "./ChatLog";
 import ChatInput from "./ChatInput";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
-import { addMessage } from "../../actions/chatActions";
+import { emitMessage, receiveMessages } from "../../actions/chatActions";
+// socket
+import io from "socket.io-client";
 
-const Chat = ({ chatLog, dispatchAddMessage }) => {
-  return (
-    <div className="chat container">
-      <ChatLog messages={chatLog} />
-      <ChatInput addMessage={dispatchAddMessage} />
-    </div>
-  );
-};
+class Chat extends Component {
+  render() {
+    const { chatLog, dispatchAddMessage, receiveMessages } = this.props;
+    const socket = io("http://localhost:8000/");
+
+    socket.on("chat message", msgs => {
+      console.log(msgs);
+      receiveMessages(msgs);
+    });
+
+    return (
+      <div className="chat container">
+        <ChatLog messages={chatLog} />
+        <ChatInput addMessage={dispatchAddMessage} />
+      </div>
+    );
+  }
+}
 
 Chat.propTypes = {
   chatLog: PropTypes.arrayOf(
@@ -30,7 +42,8 @@ const mapStateToProps = state => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-  dispatchAddMessage: payload => dispatch(addMessage(payload))
+  dispatchAddMessage: payload => dispatch(emitMessage(payload)),
+  receiveMessages: msgs => dispatch(receiveMessages(msgs))
 });
 
 export default connect(
