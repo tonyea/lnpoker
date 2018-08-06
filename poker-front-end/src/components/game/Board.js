@@ -1,46 +1,42 @@
 import React, { Component } from "react";
 import Card from "./Card";
-import { connect } from "react-redux";
 // import PropTypes from "prop-types";
+import io from "socket.io-client";
 
 class Board extends Component {
   constructor(props) {
     super(props);
 
-    this.state = {
-      card1: "AD",
-      card2: "3D",
-      card3: "4D",
-      card4: "5D",
-      card5: "6D"
-    };
+    this.state = {};
+
+    this.socket = io("http://localhost:8000/");
   }
 
-  renderCard(cardType) {
-    return <Card card={cardType} />;
+  componentDidMount() {
+    console.log("board has mounted");
+
+    // listening for socket event
+    this.socket.on("game board", board => {
+      console.log("received board data from socket", board);
+
+      this.setState(board);
+      console.log(this.state);
+    });
   }
+
+  renderCard(cardType, key) {
+    return <Card card={cardType} key={key} />;
+  }
+
   render() {
-    return (
-      <div className="row deck-row">
-        {this.renderCard(this.state.card1)}
-        {this.renderCard(this.state.card2)}
-        {this.renderCard(this.state.card3)}
-        {this.renderCard(this.state.card4)}
-        {this.renderCard(this.state.card5)}
-      </div>
-    );
+    const cardRows = [];
+    for (const key in this.state) {
+      const element = this.state[key];
+      cardRows.push(this.renderCard(element, key));
+    }
+
+    return <div className="row deck-row"> {cardRows}</div>;
   }
 }
 
-// validation on props received
-// Board.propTypes = {
-//   // new board function is required
-//   newBoard: PropTypes.func.isRequired
-// };
-
-const mapStateToProps = state => ({
-  auth: state.auth,
-  errors: state.errors
-});
-
-export default connect(mapStateToProps)(Board);
+export default Board;

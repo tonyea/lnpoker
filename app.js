@@ -1,38 +1,15 @@
 const express = require("express");
 const bodyParser = require("body-parser");
+const app = express();
 
 // get route files
 const users = require("./routes/api/users");
 const game = require("./routes/api/game");
 
-const app = express();
-
-// Sockets
-const http = require("http").Server(app);
-const io = require("socket.io")(http);
-
-io.on("connection", client => {
-  console.log("a user connected");
-
-  client.on("message", handlemessage);
-
-  client.on("disconnect", () => console.log("user disconnected"));
-});
-
-let msgs = [];
-
-const handlemessage = msg => {
-  console.log("message: " + msg);
-  // add message to back end state
-  msgs = [...msgs, msg];
-  // emit all messages to chat subscribers
-  io.emit("chat message", msgs);
-};
-
-// Set socket port
-const sock_port = process.env.SOCKET_PORT || 8000;
-
-http.listen(sock_port, () =>
+// sockets
+const ioServer = require("./socket-server")(app);
+const sock_port = process.env.SOCKET_PORT || 8000; // Set socket port
+ioServer.listen(sock_port, () =>
   console.log(`Socket listening on port ${sock_port}!`)
 );
 

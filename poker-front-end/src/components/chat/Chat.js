@@ -34,7 +34,8 @@ Chat.propTypes = {
       sendDate: PropTypes.number.isRequired
     }).isRequired
   ),
-  dispatchAddMessage: PropTypes.func.isRequired
+  dispatchAddMessage: PropTypes.func.isRequired,
+  receiveMessages: PropTypes.func.isRequired
 };
 
 const mapStateToProps = state => ({
