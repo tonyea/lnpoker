@@ -9,28 +9,24 @@ class Login extends Component {
     super();
     this.state = {
       name: "",
-      password: "",
-      errors: {}
+      password: ""
     };
 
     this.onChange = this.onChange.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
   }
 
+  // redirect if logged in user visits /login
   componentDidMount() {
     if (this.props.auth.isAuthenticated) {
       this.props.history.push("/");
     }
   }
 
-  componentWillReceiveProps(nextProps) {
-    // if user is logged in
-    if (nextProps.auth.isAuthenticated) {
-      this.props.history.push("/landing");
-    }
-
-    if (nextProps.errors) {
-      this.setState({ errors: nextProps.errors });
+  // redirect once guest logs in
+  componentDidUpdate() {
+    if (this.props.auth.isAuthenticated) {
+      this.props.history.push("/");
     }
   }
 
@@ -51,7 +47,7 @@ class Login extends Component {
   }
 
   render() {
-    const { errors } = this.state;
+    const { errors } = this.props;
 
     return (
       <div className="login">
