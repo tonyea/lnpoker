@@ -1,7 +1,10 @@
 import React, { Component } from "react";
-import { BrowserRouter as Router, Route } from "react-router-dom";
+import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import { Provider } from "react-redux";
 import store from "./store";
+
+// private routes
+import PrivateRoute from "./components/PrivateRoute";
 
 //imports to check authenticated user
 import jwt_decode from "jwt-decode";
@@ -34,7 +37,7 @@ if (localStorage.jwtToken) {
     // Logout user
     store.dispatch(logoutUser);
     // Redirect to landing
-    window.location.href = "/";
+    window.location.href = "/login";
   }
 }
 
@@ -49,7 +52,9 @@ class App extends Component {
             <div className="container">
               <Route exact path="/register" component={Register} />
               <Route exact path="/login" component={Login} />
-              <Route exact path="/play" component={Table} />
+              <Switch>
+                <PrivateRoute exact path="/play" component={Table} />
+              </Switch>
             </div>
           </div>
         </Router>

@@ -18,6 +18,7 @@ class Register extends Component {
     this.onSubmit = this.onSubmit.bind(this);
   }
 
+  // redirect if logged in user visits /register
   componentDidMount() {
     if (this.props.auth.isAuthenticated) {
       this.props.history.push("/");
