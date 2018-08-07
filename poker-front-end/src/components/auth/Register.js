@@ -11,8 +11,7 @@ class Register extends Component {
     this.state = {
       name: "",
       password: "",
-      password2: "",
-      errors: {}
+      password2: ""
     };
 
     this.onChange = this.onChange.bind(this);
@@ -22,12 +21,6 @@ class Register extends Component {
   componentDidMount() {
     if (this.props.auth.isAuthenticated) {
       this.props.history.push("/");
-    }
-  }
-
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.errors) {
-      this.setState({ errors: nextProps.errors });
     }
   }
 
@@ -49,7 +42,7 @@ class Register extends Component {
 
   render() {
     // Destructuring to get errors and user
-    const { errors } = this.state;
+    const { errors } = this.props;
 
     return (
       <div className="register">
