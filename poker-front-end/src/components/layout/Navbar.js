@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { connect } from "react-redux";
 import { logoutUser } from "../../actions/authActions";
+import numFormat from "../../utils/numFormatter";
 
 class Navbar extends Component {
   onLogoutClick(e) {
@@ -21,7 +22,7 @@ class Navbar extends Component {
             className="nav-link"
             onClick={this.onLogoutClick.bind(this)}
           >
-            Logout {user.username}
+            Balance: {numFormat(user.chips, 1)} Sats || Logout {user.username}
           </a>
         </li>
       </ul>
