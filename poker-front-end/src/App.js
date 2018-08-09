@@ -27,7 +27,7 @@ if (localStorage.jwtToken) {
 
   // decode token and get user info and exp
   const decoded = jwt_decode(localStorage.jwtToken);
-
+  // console.log(decoded);
   // set user and isAuthenticated
   store.dispatch(setCurrentUser(decoded));
 
@@ -35,7 +35,7 @@ if (localStorage.jwtToken) {
   const currentTime = Date.now() / 1000;
   if (decoded.exp < currentTime) {
     // Logout user
-    store.dispatch(logoutUser);
+    logoutUser()(store.dispatch);
     // Redirect to landing
     window.location.href = "/login";
   }
