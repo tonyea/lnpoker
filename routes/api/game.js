@@ -39,38 +39,41 @@ router.post(
   "/:tableid",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    const errors = {};
-
-    Table.findById(req.params.tableid).then(table => {
-      if (!table) {
-        errors.notable = "There is no table with that id";
-        return res.status(404).json(errors);
-      }
-      // check that the user is allowed to join this table
-      async function playerExists() {
-        let p;
-
-        try {
-          p = await table.players.find(player =>
-            player.user.equals("5b6b06f484dd6028eba04756")
-          );
-        } catch (err) {
-          res.status(404).json(err);
-        }
-        return p;
-      }
-
-      // return error if player is already on table
-      if (playerExists()) {
-        errors.alreadyplaying = "You are already playing on a table";
-        return res.status(404).json(errors);
-      }
-      // add the user to the table
-      table.players.push({ user: req.user.id });
-      table.save();
-      res.json(table);
-    });
+    run(req, res);
   }
 );
 
+async function run(req, res) {
+  const errors = {};
+
+  const table = await Table.findById(req.params.tableid);
+
+  if (!table) {
+    errors.notable = "There is no table with that id";
+    return res.status(404).json(errors);
+  }
+  // check that the user is allowed to join this table
+  async function playerExists() {
+    let p;
+
+    try {
+      p = await table.players.find(player =>
+        player.user.equals("5b6b06f484dd6028eba04756")
+      );
+    } catch (err) {
+      res.status(404).json(err);
+    }
+    return p;
+  }
+
+  // return error if player is already on table
+  if (playerExists()) {
+    errors.alreadyplaying = "You are already playing on a table";
+    return res.status(404).json(errors);
+  }
+  // add the user to the table
+  table.players.push({ user: req.user.id });
+  table = await table.save();
+  res.json(table);
+}
 module.exports = router;
