@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
+const passport = require("passport");
 
 // get route files
 const users = require("./routes/api/users");
@@ -16,6 +17,10 @@ ioServer.listen(sock_port, () =>
 // Body parser middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+// Passport middleware
+app.use(passport.initialize());
+// Passport Config
+require("./passport")(passport);
 
 // get request to homepage
 app.get("/", (req, res) => {

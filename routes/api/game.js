@@ -1,51 +1,75 @@
-const poker = require("../../lib/node-poker");
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+const Table = require("../../models/Table");
 
-// Load game model
-// const Game = require("../../models/Game");
+// Load user model
+const User = require("../../models/User");
+
+// temp
+const poker = require("../../lib/node-poker");
 
 // @route   POST api/game
-// @desc    Create a new table and persist to DB
+// @desc    Create a new table if user hasn't already created / joined another table and persist to DB
 // @access  Private
 router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // hardcoded inputs instead of destructuring table arguments
-    const smallBlind = 1000;
-    const bigBlind = 2000;
-    const minPlayers = 2;
-    const maxPlayers = 5;
-    const minBuyIn = 100000; // min buy in 100k sats
-    const maxBuyIn = 100000000; // max buy in 1 BTC = 100m Sats
-
     // if user doesn't already have a table open then create a new table
 
     // create a new table
-    const table = new poker.Table(
-      smallBlind,
-      bigBlind,
-      minPlayers,
-      maxPlayers,
-      minBuyIn,
-      maxBuyIn
-    );
+    // using default params instead of destructuring table arguments
+    const table = new Table();
 
-    // test players add
-    table.AddPlayer("bob", 1000);
-    table.AddPlayer("jane", 1000);
-
-    // formatting for mongodb?
-    const newTable = new Game(table);
-
-    // persist table to DB
-    newTable
+    // // persist table to DB
+    table
       .save()
-      // return json table
       .then(table => res.json(table))
-      .catch(err => console.log(err));
+      .catch(err => res.status(404).json(err));
+  }
+
+  // return error : could not start a new game
+);
+
+// @route   POST api/game/:tableid
+// @desc    User can join a table to play poker
+// @access  Private
+router.post(
+  "/:tableid",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const errors = {};
+
+    Table.findById(req.params.tableid).then(table => {
+      if (!table) {
+        errors.notable = "There is no table with that id";
+        return res.status(404).json(errors);
+      }
+      // check that the user is allowed to join this table
+      async function playerExists() {
+        let p;
+
+        try {
+          p = await table.players.find(player =>
+            player.user.equals("5b6b06f484dd6028eba04756")
+          );
+        } catch (err) {
+          res.status(404).json(err);
+        }
+        return p;
+      }
+
+      // return error if player is already on table
+      if (playerExists()) {
+        errors.alreadyplaying = "You are already playing on a table";
+        return res.status(404).json(errors);
+      }
+      // add the user to the table
+      table.players.push({ user: req.user.id });
+      table.save();
+      res.json(table);
+    });
   }
 );
 
