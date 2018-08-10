@@ -16,64 +16,74 @@ router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // if user doesn't already have a table open then create a new table
+    const getTableCb = (errors, tableFromCaller = {}) => {
+      if (errors) {
+        console.log("errors", errors);
+        res.status(400);
+        return res.json(errors);
+      }
 
+      // console.log("tableFromCaller", tableFromCaller);
+      return res.json(tableFromCaller);
+    };
+
+    // if table exists and user is not already on table then add user to table, else create a new table
+    joinTableIfItExists(getTableCb, req.user.id);
+  }
+);
+
+// @desc - join existing table
+// @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
+// returns errors or table data
+async function joinTableIfItExists(cb, userID) {
+  // find the first table in the DB. This is temporary until we add ability for multiple tables
+  let table;
+  try {
+    table = await Table.findOne();
+  } catch (err) {
+    return cb(err);
+  }
+
+  // if none exists then create a new table
+  if (table === null) {
     // create a new table
     // using default params instead of destructuring table arguments
     const table = new Table();
 
     // // persist table to DB
-    table
-      .save()
-      .then(table => res.json(table))
-      .catch(err => res.status(404).json(err));
-  }
-
-  // return error : could not start a new game
-);
-
-// @route   POST api/game/:tableid
-// @desc    User can join a table to play poker
-// @access  Private
-router.post(
-  "/:tableid",
-  passport.authenticate("jwt", { session: false }),
-  (req, res) => {
-    run(req, res);
-  }
-);
-
-async function run(req, res) {
-  const errors = {};
-
-  const table = await Table.findById(req.params.tableid);
-
-  if (!table) {
-    errors.notable = "There is no table with that id";
-    return res.status(404).json(errors);
-  }
-  // check that the user is allowed to join this table
-  async function playerExists() {
-    let p;
 
     try {
-      p = await table.players.find(player =>
-        player.user.equals("5b6b06f484dd6028eba04756")
-      );
-    } catch (err) {
-      res.status(404).json(err);
+      await table.save();
+    } catch (error) {
+      return cb(error);
     }
-    return p;
+    return cb(null, table);
   }
 
-  // return error if player is already on table
-  if (playerExists()) {
-    errors.alreadyplaying = "You are already playing on a table";
-    return res.status(404).json(errors);
+  let p;
+  // get player if he already exists on table
+  try {
+    p = await table.players.find(player => player.user.equals(userID));
+  } catch (err) {
+    return cb(err);
   }
+  // return table if player is already on table
+  if (p) {
+    return cb(null, table);
+  }
+
+  // set player object to requesting user's id if above are false
+  p = { user: userID };
+
+  // console.log("p", p);
   // add the user to the table
-  table.players.push({ user: req.user.id });
-  table = await table.save();
-  res.json(table);
+  table.players.push(p);
+  try {
+    table = await table.save();
+  } catch (error) {
+    return cb(error);
+  }
+  return cb(null, table);
 }
+
 module.exports = router;
