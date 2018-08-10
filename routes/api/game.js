@@ -63,12 +63,21 @@ async function joinTableIfItExists(cb, userID) {
   let p;
   // get player if he already exists on table
   try {
+    Table.findOne()
+      .populate({
+        path: "players",
+        populate: { path: "user", model: "User" }
+      })
+      .exec((err, tab) => {
+        return tab;
+      });
     p = await table.players.find(player => player.user.equals(userID));
   } catch (err) {
     return cb(err);
   }
   // return table if player is already on table
   if (p) {
+    // console.log(table.populate("players").populate("user", "name"));
     return cb(null, table);
   }
 
