@@ -29,15 +29,8 @@ const TableSchema = new Schema({
   },
   players: [
     {
-      user: {
-        type: Schema.Types.ObjectId, // players is an array of User objects, importing schema
-        ref: "users"
-      },
-      chips: { type: Number, default: 1000 },
-      folded: { type: Boolean, default: false },
-      allIn: { type: Boolean, default: false },
-      talked: { type: Boolean, default: false },
-      cards: [String] // cards held by player
+      type: Schema.Types.ObjectId, // profiles is an array of profile objects, importing schema
+      ref: "users"
     }
   ],
   dealerPosition: {

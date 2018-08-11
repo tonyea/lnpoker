@@ -2,13 +2,6 @@ const express = require("express");
 const router = express.Router();
 const passport = require("passport");
 const Table = require("../../models/Table");
-const { performance } = require("perf_hooks");
-
-// Load user model
-const User = require("../../models/User");
-
-// temp
-const poker = require("../../lib/node-poker");
 
 // @route   POST api/game
 // @desc    Create a new table if user hasn't already created / joined another table and persist to DB
@@ -37,80 +30,40 @@ router.post(
 // @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
 // returns errors or table data
 async function joinTableIfItExists(cb, userID) {
-  // find the first table in the DB. This is temporary until we add ability for multiple tables
   let table;
   try {
-    let t0 = performance.now();
-    table = await Table.findOne();
+    // find the first table in the DB. This is temporary until we add ability for multiple tables
+    table = await Table.findOne().populate("players", "name");
 
-    let t1 = performance.now();
-    console.log("Call to Table.findOne() took " + (t1 - t0) + " milliseconds.");
-  } catch (err) {
-    return cb(err);
-  }
+    // if none exists then create a new table
+    if (table === null) {
+      // create a new table
+      // using default params instead of destructuring table arguments
+      const table = new Table();
 
-  // if none exists then create a new table
-  if (table === null) {
-    // create a new table
-    // using default params instead of destructuring table arguments
-    const table = new Table();
+      // append user id to table | auto join the table you create
+      table.players.unshift(userID);
 
-    // // persist table to DB
-
-    try {
+      // persist table to DB
       await table.save();
-    } catch (error) {
-      return cb(error);
+
+      return cb(null, table);
     }
-    return cb(null, table);
-  }
 
-  let p;
-  // get player if he already exists on table
-  try {
-    // select * from user_table inner join users!
-    // Table.findOne()
-    //   .populate({
-    //     path: "players",
-    //     populate: { path: "user", model: "User" }
-    //   })
-    //   .exec((err, tab) => {
-    //     return tab;
-    //   });
+    let p;
+    // get player if he already exists on table
 
-    // // Testing Performance
-    // let t0 = performance.now();
-    // table = await Table.findOne();
-    // await table.players.find(player => player.user.equals(userID));
-    // let t1 = performance.now();
-    // console.log(
-    //   "Call to table.players.find took " + (t1 - t0) + " milliseconds."
-    // );
+    p = table.players.filter(player => player.equals(userID));
+    // return table if player is already on table
+    if (p.length > 0) {
+      // console.log(table.populate("players").populate("user", "name"));
+      return cb(null, table);
+    }
 
-    let t0 = performance.now();
-    // select userid from user_table where userid = {userID};
-    p = await table.players.find(player => player.user.equals(userID));
+    // set player object to requesting user's id if above are false
+    // add the user to the table
+    table.players.unshift(userID);
 
-    let t1 = performance.now();
-    console.log(
-      "Call to table.players.find took " + (t1 - t0) + " milliseconds."
-    );
-  } catch (err) {
-    return cb(err);
-  }
-  // return table if player is already on table
-  if (p) {
-    // console.log(table.populate("players").populate("user", "name"));
-    return cb(null, table);
-  }
-
-  // set player object to requesting user's id if above are false
-  p = { user: userID };
-
-  // console.log("p", p);
-  // add the user to the table
-  table.players.push(p);
-  try {
     table = await table.save();
   } catch (error) {
     return cb(error);
