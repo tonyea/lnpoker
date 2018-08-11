@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const passport = require("passport");
 const Table = require("../../models/Table");
+const { performance } = require("perf_hooks");
 
 // Load user model
 const User = require("../../models/User");
@@ -39,7 +40,11 @@ async function joinTableIfItExists(cb, userID) {
   // find the first table in the DB. This is temporary until we add ability for multiple tables
   let table;
   try {
+    let t0 = performance.now();
     table = await Table.findOne();
+
+    let t1 = performance.now();
+    console.log("Call to Table.findOne() took " + (t1 - t0) + " milliseconds.");
   } catch (err) {
     return cb(err);
   }
@@ -63,15 +68,33 @@ async function joinTableIfItExists(cb, userID) {
   let p;
   // get player if he already exists on table
   try {
-    Table.findOne()
-      .populate({
-        path: "players",
-        populate: { path: "user", model: "User" }
-      })
-      .exec((err, tab) => {
-        return tab;
-      });
+    // select * from user_table inner join users!
+    // Table.findOne()
+    //   .populate({
+    //     path: "players",
+    //     populate: { path: "user", model: "User" }
+    //   })
+    //   .exec((err, tab) => {
+    //     return tab;
+    //   });
+
+    // // Testing Performance
+    // let t0 = performance.now();
+    // table = await Table.findOne();
+    // await table.players.find(player => player.user.equals(userID));
+    // let t1 = performance.now();
+    // console.log(
+    //   "Call to table.players.find took " + (t1 - t0) + " milliseconds."
+    // );
+
+    let t0 = performance.now();
+    // select userid from user_table where userid = {userID};
     p = await table.players.find(player => player.user.equals(userID));
+
+    let t1 = performance.now();
+    console.log(
+      "Call to table.players.find took " + (t1 - t0) + " milliseconds."
+    );
   } catch (err) {
     return cb(err);
   }
