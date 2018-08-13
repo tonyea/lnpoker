@@ -18,6 +18,9 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log(err));
 
+// connecting Postgres
+const pg = require("./db");
+
 // Set port
 const port = process.env.PORT || 5000;
 

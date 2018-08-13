@@ -22,7 +22,7 @@ class Navbar extends Component {
             className="nav-link"
             onClick={this.onLogoutClick.bind(this)}
           >
-            Balance: {numFormat(user.chips, 1)} Sats || Logout {user.username}
+            Balance: {numFormat(user.bank, 1)} Sats || Logout {user.username}
           </a>
         </li>
       </ul>
