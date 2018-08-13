@@ -3,13 +3,9 @@
 // it allows you to use async functions as route handlers
 const Router = require("express-promise-router");
 const router = new Router();
-
 const db = require("../../db");
-
-const User = require("../../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
 // using env for jwtsecret
 require("dotenv").config();
 const secret = process.env.jwtSecretOrKey;

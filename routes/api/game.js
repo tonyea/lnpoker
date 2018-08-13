@@ -1,7 +1,7 @@
-const express = require("express");
-const router = express.Router();
 const passport = require("passport");
-const Table = require("../../models/Table");
+const Router = require("express-promise-router");
+const router = new Router();
+const db = require("../../db");
 
 // @route   POST api/game
 // @desc    Create a new table if user hasn't already created / joined another table and persist to DB
@@ -9,7 +9,8 @@ const Table = require("../../models/Table");
 router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
-  (req, res) => {
+  async (req, res) => {
+    // callback function that returns error or table object
     const getTableCb = (errors, tableFromCaller = {}) => {
       if (errors) {
         console.log("errors", errors);
@@ -33,38 +34,65 @@ async function joinTableIfItExists(cb, userID) {
   let table;
   try {
     // find the first table in the DB. This is temporary until we add ability for multiple tables
-    table = await Table.findOne().populate("players", "name");
-
+    // table = await Table.findOne().populate("players", "name");
+    const { rows } = await db.query("SELECT * FROM lnpoker.tables limit 1");
     // if none exists then create a new table
-    if (table === null) {
+    if (rows.length < 1) {
       // create a new table
       // using default params instead of destructuring table arguments
-      const table = new Table();
+      table = await db.query(
+        "INSERT INTO lnpoker.tables DEFAULT VALUES returning *"
+      ).rows[0];
 
       // append user id to table | auto join the table you create
-      table.players.unshift(userID);
+      await db.query(
+        "INSERT INTO lnpoker.user_table(player_id, table_id) VALUES ($1, $2)",
+        [userID, table.id]
+      );
+      const players = await db.query(
+        "SELECT username, dealer, chips, folded, allin, talked, cards FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
+        [table.id]
+      );
 
-      // persist table to DB
-      await table.save();
-
+      if (players.rows.length > 0) {
+        table.players = players.rows;
+      }
       return cb(null, table);
     }
 
-    let p;
     // get player if he already exists on table
+    table = rows[0];
+    const player = await db.query(
+      "SELECT username FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.player_id = $1 and lnpoker.user_table.table_id = $2",
+      [userID, table.id]
+    );
 
-    p = table.players.filter(player => player.equals(userID));
     // return table if player is already on table
-    if (p.length > 0) {
-      // console.log(table.populate("players").populate("user", "name"));
+    if (player.rows.length > 0) {
+      const players = await db.query(
+        "SELECT username, dealer, chips, folded, allin, talked, cards FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
+        [table.id]
+      );
+      if (players.rows.length > 0) {
+        table.players = players.rows;
+      }
       return cb(null, table);
     }
 
     // set player object to requesting user's id if above are false
     // add the user to the table
-    table.players.unshift(userID);
+    await db.query(
+      "INSERT INTO lnpoker.user_table(player_id, table_id) VALUES ($1, $2)",
+      [userID, table.id]
+    );
+    const players = await db.query(
+      "SELECT username, dealer, chips, folded, allin, talked, cards FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
+      [table.id]
+    );
 
-    table = await table.save();
+    if (players.rows.length > 0) {
+      table.players = players.rows;
+    }
   } catch (error) {
     return cb(error);
   }
