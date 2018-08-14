@@ -54,16 +54,12 @@ const getPlayersAtTable = async tableID => {
 // @return bool
 // @desc return true if user is found on table, else false
 const isPlayerOnTable = async (userID, tableID) => {
-  // let t0 = performance.now();
   const result = await db.query(
     "SELECT username FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.player_id = $1 and lnpoker.user_table.table_id = $2",
     [userID, tableID]
   );
-  // let t1 = performance.now();
-  // console.log(
-  //   "Call to table.players.find took " + (t1 - t0) + " milliseconds."
-  // );
 
+  console.log("result.rows.length", result.rows.length);
   if (result.rows.length > 0) {
     return true;
   }
@@ -90,7 +86,8 @@ const joinTableIfItExists = async (cb, userID) => {
     }
 
     // return table if player is already on table
-    if (isPlayerOnTable(userID, table.id)) {
+    console.log(await isPlayerOnTable(userID, table.id));
+    if (await isPlayerOnTable(userID, table.id)) {
       table.players = await getPlayersAtTable(table.id);
       return cb(null, table);
     }
@@ -106,7 +103,17 @@ const joinTableIfItExists = async (cb, userID) => {
   return cb(null, table);
 };
 
-module.exports = { joinTableIfItExists };
+// @desc - join existing table
+// @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
+// returns errors or table data
+const exitTable = async userID => {
+  await db.query(
+    "DELETE FROM lnpoker.user_table WHERE lnpoker.user_table.player_id = $1",
+    [userID]
+  );
+};
+
+module.exports = { joinTableIfItExists, exitTable };
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

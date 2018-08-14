@@ -18,7 +18,6 @@ class Opponents extends Component {
       return <div>No Players have joined</div>;
     }
 
-    console.log(this.props.players);
     return <div className="row opponents-row">{playerRows}</div>;
   }
 }

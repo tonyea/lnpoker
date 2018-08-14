@@ -4,7 +4,7 @@ import Opponents from "./Opponents";
 import Player from "./Player";
 import Chat from "../chat/Chat";
 import { connect } from "react-redux";
-import { getGame } from "../../actions/gameActions";
+import { getGame, exitGame } from "../../actions/gameActions";
 
 class Table extends Component {
   componentDidMount() {
@@ -12,6 +12,12 @@ class Table extends Component {
     console.log("table has mounted");
 
     this.props.getGame();
+  }
+
+  componentWillUnmount() {
+    console.log("unmount called");
+    // remove player from state when leaving table
+    this.props.exitGame();
   }
   render() {
     return (
@@ -35,5 +41,5 @@ const mapStateToProps = state => ({
 
 export default connect(
   mapStateToProps,
-  { getGame }
+  { getGame, exitGame }
 )(Table);
