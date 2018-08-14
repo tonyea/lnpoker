@@ -9,14 +9,17 @@ const init = app => {
   const io = require("socket.io")(http);
   // const gameEvents = require("./event_handlers/game_handler");
 
+  let activePlayers = [];
+  let userNum = 0;
   io.on("connection", client => {
-    console.log("a user connected");
+    userNum++;
+    console.log("a user connected", userNum);
+
+    client.on("new player", handleNewPlayer);
 
     client.on("message", handleMessage);
 
-    client.on("new game", newGame);
-
-    client.on("disconnect", () => console.log("user disconnected"));
+    client.on("disconnect", handleDisconnect);
   });
 
   let msgs = [];
@@ -28,23 +31,23 @@ const init = app => {
     io.emit("chat message", msgs);
   };
 
-  const newGame = () => {
-    const table = new poker.Table(50, 100, 4, 10, 100, 1000);
+  const handleNewPlayer = (id, name) => {
+    activePlayers.push({ id, name });
 
-    table.AddPlayer("bob", 1000);
-    table.AddPlayer("jane", 1000);
-    table.AddPlayer("dylan", 1000);
-    table.AddPlayer("john", 1000);
-
-    table.StartGame();
-
-    // console.log(table.game);
-    io.emit("game", table.game);
-
-    // sending deck of 5 to board
-    io.emit("game board", table.game.deck.slice(0, 5));
+    console.log("a user connected", activePlayers);
   };
 
+  const handleDisconnect = id => {
+    // find index of user that disconnected, remove from array and remove from DB user_table
+    // activePlayers.findIndex(index => {
+    //   if (activePlayers[index].id === id) {
+    //     activePlayers.splice(index, 1);
+    //   }
+    // });
+    // console.log("user disconnected", activePlayers);
+    userNum--;
+    console.log("user disconnected", userNum);
+  };
   return http;
 };
 

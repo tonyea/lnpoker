@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import Card from "./Card";
 // import PropTypes from "prop-types";
-import io from "socket.io-client";
+// import io from "socket.io-client";
 
 class Board extends Component {
   constructor(props) {
@@ -9,20 +9,20 @@ class Board extends Component {
 
     this.state = {};
 
-    this.socket = io("http://localhost:8000/");
+    // this.socket = io("http://localhost:8000/");
   }
 
-  componentDidMount() {
-    console.log("board has mounted");
+  // componentDidMount() {
+  //   console.log("board has mounted");
 
-    // listening for socket event
-    this.socket.on("game board", board => {
-      console.log("received board data from socket", board);
+  //   // listening for socket event
+  //   // this.socket.on("game board", board => {
+  //   //   console.log("received board data from socket", board);
 
-      this.setState(board);
-      console.log(this.state);
-    });
-  }
+  //   //   this.setState(board);
+  //   //   console.log(this.state);
+  //   // });
+  // }
 
   renderCard(cardType, key) {
     return <Card card={cardType} key={key} />;

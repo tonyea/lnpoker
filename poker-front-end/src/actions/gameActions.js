@@ -4,6 +4,8 @@ import axios from "axios";
 export const getGame = () => async dispatch => {
   // dispatch(setGameLoading());
 
+  // also dispatch new user to socket?
+
   try {
     const res = await axios.post("/api/game");
     dispatch(setNewGameState(res.data));
@@ -19,7 +21,7 @@ export const exitGame = () => async dispatch => {
   // update local game state
   dispatch(setNewGameState({}));
   try {
-    const res = await axios.post("api/game/leave");
+    await axios.post("api/game/leave");
     // console.log(res);
   } catch (error) {
     dispatch({

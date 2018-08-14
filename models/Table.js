@@ -59,7 +59,6 @@ const isPlayerOnTable = async (userID, tableID) => {
     [userID, tableID]
   );
 
-  console.log("result.rows.length", result.rows.length);
   if (result.rows.length > 0) {
     return true;
   }
@@ -86,7 +85,6 @@ const joinTableIfItExists = async (cb, userID) => {
     }
 
     // return table if player is already on table
-    console.log(await isPlayerOnTable(userID, table.id));
     if (await isPlayerOnTable(userID, table.id)) {
       table.players = await getPlayersAtTable(table.id);
       return cb(null, table);

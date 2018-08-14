@@ -59,7 +59,6 @@ describe("User MVC test", () => {
 
           // check to see if profiled data is returned
           expect(res.body.name).toEqual(testusername);
-          // console.log(res.body);
         });
     });
 

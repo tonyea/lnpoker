@@ -18,11 +18,14 @@ export default class ChatInput extends Component {
 
   sendMessage(e) {
     // send message
-    this.props.addMessage({
-      message: this.state.myMsg,
-      author: "Anthony",
-      sendDate: Date.now()
-    });
+    this.props.addMessage(
+      {
+        message: this.state.myMsg,
+        author: "Anthony",
+        sendDate: Date.now()
+      },
+      this.props.socket
+    );
     // clear input
     this.setState({ myMsg: "" });
   }
