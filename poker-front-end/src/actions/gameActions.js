@@ -1,5 +1,5 @@
 import {
-  GAME_START,
+  SET_GAME_STATE,
   GAME_LOADING,
   GET_ERRORS,
   ADD_MESSAGE,
@@ -39,7 +39,7 @@ export const exitGame = () => async dispatch => {
 };
 
 export const setNewGameState = gameFromServer => ({
-  type: GAME_START,
+  type: SET_GAME_STATE,
   game: gameFromServer
 });
 

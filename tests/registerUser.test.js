@@ -1,156 +1,148 @@
-const mongoose = require("mongoose");
 // using test database
 require("dotenv").config();
 const app = require("../app");
 const request = require("supertest");
-const User = require("../models/User");
+const db = require("../db");
 
-// Setup and teardown of DB
-// DB Config
-const url = process.env.MONGO_URI_TEST;
-mongoose.connect(
-  url,
-  { useNewUrlParser: true }
-);
-
-// Test the root path
-describe("Test the root path", () => {
-  test("It should respond with GET method", () => {
-    expect.assertions(2);
-    return request(app)
-      .get("/")
-      .then(response => {
-        expect(response.statusCode).toBe(200);
-        expect(1).toBe(1);
-      });
-  });
-});
-
-// Test the User MVC
-describe("User MVC test", () => {
-  // setup and teardown
+describe("User Auth Tests", () => {
+  // setup and teardown of DB
   beforeAll(async () => {
-    await User.remove({});
+    try {
+      await db.query("BEGIN");
+      // await client.query("COMMIT");
+      await db.query("SAVEPOINT before_all_testing");
+    } catch (e) {
+      console.log(e);
+    }
   });
 
   afterAll(async () => {
-    await mongoose.connection.close();
+    try {
+      await db.query("ROLLBACK TO before_all_testing");
+    } catch (e) {
+      console.log(e);
+    } finally {
+      db.release();
+    }
   });
 
-  /**  
+  /**
     Client browser hits api/users/register with POST requets and form filled with a username, password and password 2. API returns user profile
   **/
   describe("User Registration", () => {
     const testusername = "testees";
     const testpassword = "password";
 
-    test("It should respond with valid POST method", () => {
+    test("It should respond with valid POST method", async () => {
       expect.assertions(2);
-      return request(app)
+
+      const res = await request(app)
         .post("/api/users/register")
         .send({
           name: testusername,
           password: testpassword,
           password2: testpassword
-        })
-        .then(res => {
-          // check to see if response is ok
-          expect(res.statusCode).toBe(200);
-
-          // check to see if profiled data is returned
-          expect(res.body.name).toEqual(testusername);
         });
+
+      // check to see if response is ok
+      expect(res.statusCode).toBe(200);
+
+      // check to see if profiled data is returned
+      expect(res.body.username).toEqual(testusername);
+      // return;
     });
 
     // check to see if profile data is persisted to DB
-    test("DB should have persisted user", () => {
+    test("DB should have persisted user", async () => {
       expect.assertions(2);
-      return User.findOne({ name: testusername }).then(user => {
-        expect(user.name).toEqual(testusername);
 
-        // Check that the password is not same plaintext
-        expect(user.password).not.toBe(testpassword);
-      });
+      const user = await db.query(
+        "SELECT username, password from lnpoker.users where username=$1",
+        [testusername]
+      );
+
+      expect(user.rows[0].username).toEqual(testusername);
+
+      // Check that the password is not same plaintext
+      expect(user.rows[0].password).not.toBe(testpassword);
     });
-  });
 
-  // Client browser hits api/users/register with POST request and form filled with special char username, password or password 2. API returns error
-  describe("Test bad registrations", () => {
-    // bad usernames should return errors
-    test("Bad usernames", () => {
-      const testusername = "Test User&*%";
-      const testpassword = "password";
+    // // Client browser hits api/users/register with POST request and form filled with special char username, password or password 2. API returns error
+    describe("Test bad registrations", () => {
+      // bad usernames should return errors
+      test("Bad usernames", async () => {
+        const testusername = "Test User&*%";
+        const testpassword = "password";
 
-      expect.assertions(2);
-      return request(app)
-        .post("/api/users/register")
-        .send({
-          name: testusername,
-          password: testpassword,
-          password2: testpassword
-        })
-        .then(res => {
-          // check to see if response is bad
-          expect(res.statusCode).toBe(400);
+        expect.assertions(2);
 
-          // return error message
-          expect(res.body.username).toContain("characters");
-        });
+        const res = await request(app)
+          .post("/api/users/register")
+          .send({
+            name: testusername,
+            password: testpassword,
+            password2: testpassword
+          });
+
+        // check to see if response is bad
+        expect(res.statusCode).toBe(400);
+
+        // return error message
+        expect(res.body.username).toContain("characters");
+      });
     });
 
     //  Client browser hits api/users/register with POST requets and form filled with a mismatched password and password 2. API returns error.
-    test("Password 1 and 2 must match", () => {
+    test("Password 1 and 2 must match", async () => {
       const testusername = "gooduser";
       const testpassword = "password";
 
       expect.assertions(2);
-      return request(app)
+
+      const res = await request(app)
         .post("/api/users/register")
         .send({
           name: testusername,
           password: testpassword,
           password2: "randomxyz"
-        })
-        .then(res => {
-          // check to see if response is bad
-          expect(res.statusCode).toBe(400);
-
-          // return error message
-          expect(res.body.password2).toContain("match");
         });
+
+      // check to see if response is bad
+      expect(res.statusCode).toBe(400);
+
+      // return error message
+      expect(res.body.password2).toContain("match");
     });
 
     //  Client browser hits api/users/register with POST requets and form filled with a preexisting username. API returns error.
-    test("No duplicate usernames allowed", () => {
+    test("No duplicate usernames allowed", async () => {
       const duplicateuser = "gooduser";
       const testpassword = "password";
 
       expect.assertions(2);
 
       // creating duplicate users with nested promises
-      return request(app)
+      await request(app)
         .post("/api/users/register")
         .send({
           name: duplicateuser,
           password: testpassword,
           password2: testpassword
-        })
-        .then(res => {
-          return request(app)
-            .post("/api/users/register")
-            .send({
-              name: duplicateuser,
-              password: testpassword,
-              password2: testpassword
-            })
-            .then(res => {
-              // check to see if response is bad
-              expect(res.statusCode).toBe(400);
-
-              // return error message
-              expect(res.body.username).toContain("exists");
-            });
         });
+
+      const res = await request(app)
+        .post("/api/users/register")
+        .send({
+          name: duplicateuser,
+          password: testpassword,
+          password2: testpassword
+        });
+
+      // check to see if response is bad
+      expect(res.statusCode).toBe(400);
+
+      // return error message
+      expect(res.body.username).toContain("exists");
     });
   });
 
@@ -170,58 +162,52 @@ describe("User MVC test", () => {
         });
     });
 
-    test("User found", () => {
+    test("User found", async () => {
       expect.assertions(2);
 
-      return request(app)
+      const res = await request(app)
         .post("/api/users/login")
         .send({
           name: testusername,
           password: testpassword
-        })
-        .then(res => {
-          // check to see if response is bad
-          expect(res.statusCode).toBe(200);
-
-          // return error message
-          expect(res.body.success).toBe(true);
         });
+      // check to see if response is bad
+      expect(res.statusCode).toBe(200);
+
+      // return error message
+      expect(res.body.success).toBe(true);
     });
 
-    test("Password incorrect", () => {
+    test("Password incorrect", async () => {
       expect.assertions(2);
 
-      return request(app)
+      const res = await request(app)
         .post("/api/users/login")
         .send({
           name: testusername,
           password: "wrongpass"
-        })
-        .then(res => {
-          // check to see if response is bad
-          expect(res.statusCode).toBe(400);
-
-          // return error message
-          expect(res.body.password).toContain("Password incorrect");
         });
+      // check to see if response is bad
+      expect(res.statusCode).toBe(400);
+
+      // return error message
+      expect(res.body.password).toContain("Password incorrect");
     });
 
-    test("User not found", () => {
+    test("User not found", async () => {
       expect.assertions(2);
 
-      return request(app)
+      const res = await request(app)
         .post("/api/users/login")
         .send({
           name: "wronguser",
           password: testpassword
-        })
-        .then(res => {
-          // check to see if response is bad
-          expect(res.statusCode).toBe(404);
-
-          // return error message
-          expect(res.body.username).toContain("not found");
         });
+      // check to see if response is bad
+      expect(res.statusCode).toBe(404);
+
+      // return error message
+      expect(res.body.username).toContain("not found");
     });
   });
 });

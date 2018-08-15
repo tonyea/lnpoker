@@ -17,21 +17,61 @@ const findTable = async () => {
 
 // @params NA
 // @return table object without players array
-// @desc create a new table using default params instead of destructuring table arguments
-const createNewTable = async () => {
-  return await db.query("INSERT INTO lnpoker.tables DEFAULT VALUES returning *")
-    .rows[0];
+// @desc create a new table using default params instead of destructuring table arguments, start new round
+const createNewTable = async userID => {
+  const res = await db.query(
+    "INSERT INTO lnpoker.tables DEFAULT VALUES returning *"
+  );
+
+  // auto join newly created table
+  await joinTable(res.rows[0].id, userID);
+
+  return res.rows[0];
 };
 
 // @params tableID and userID
-// @return table object with players array
-// @desc create a new table using default params instead of destructuring table arguments
+// @return null
+// @desc add user's id to user_table and distribute his cards from deck
 const joinTable = async (tableID, userID) => {
   // append user id to table | auto join the table you create
   await db.query(
     "INSERT INTO lnpoker.user_table(player_id, table_id) VALUES ($1, $2)",
     [userID, tableID]
   );
+
+  //If there is no current game and we have enough players, start a new game. Set status to started
+  const tableRow = await db.query(
+    "SELECT status, minplayers from lnpoker.tables where id = $1",
+    [tableID]
+  );
+  const playersRows = await db.query(
+    "SELECT count(id) as numplayers from lnpoker.user_table where table_id = $1",
+    [tableID]
+  );
+
+  const minPlayers =
+    tableRow.rows.length > 0 ? tableRow.rows[0].minplayers : null;
+  const numPlayers =
+    playersRows.rows.length > 0 ? parseInt(playersRows.rows[0].numplayers) : 0;
+  // return error if we don't find table
+  if (minPlayers === null) {
+    throw "No table found";
+  }
+  // check if we have minimum number of players
+  if (numPlayers < minPlayers) {
+    throw "Not enough players";
+  }
+  // start new round if status is 'waiting'
+  if (tableRow.rows[0].status === "waiting") {
+    // start a new round
+    newRound(tableID);
+
+    // set table status to started
+    await db.query(
+      "UPDATE lnpoker.tables SET status = 'started' where id = $1",
+      [tableID]
+    );
+  }
 };
 
 // @params tableID
@@ -75,9 +115,7 @@ const joinTableIfItExists = async (cb, userID) => {
     table = await findTable();
     // create new table if none found
     if (!table) {
-      table = await createNewTable();
-
-      await joinTable(table.id, userID);
+      table = await createNewTable(userID);
 
       table.players = await getPlayersAtTable(table.id);
 
@@ -109,6 +147,163 @@ const exitTable = async userID => {
     "DELETE FROM lnpoker.user_table WHERE lnpoker.user_table.player_id = $1",
     [userID]
   );
+};
+
+// @desc - trigger this to start a new round
+// @params - tableID
+// returns null
+const newRound = async tableID => {
+  console.log("newRound on table, ", tableID);
+  // deck will contain comma separated string of deck array
+  const deck = "{" + fillDeck().join() + "}";
+
+  await db.query(
+    "UPDATE lnpoker.tables SET deck = $1 WHERE id=$2 RETURNING *",
+    [deck, res.rows[0].id]
+  );
+
+  // // Add players in waiting list
+  // var removeIndex = 0;
+  // for (var i in this.playersToAdd) {
+  //   if (removeIndex < this.playersToRemove.length) {
+  //     var index = this.playersToRemove[removeIndex];
+  //     this.players[index] = this.playersToAdd[i];
+  //     removeIndex += 1;
+  //   } else {
+  //     this.players.push(this.playersToAdd[i]);
+  //   }
+  // }
+  // this.playersToRemove = [];
+  // this.playersToAdd = [];
+  // this.gameWinners = [];
+  // this.gameLosers = [];
+
+  // var i, smallBlind, bigBlind;
+  // //Deal 2 cards to each player
+  // for (i = 0; i < this.players.length; i += 1) {
+  //   this.players[i].cards.push(this.game.deck.pop());
+  //   this.players[i].cards.push(this.game.deck.pop());
+  //   this.game.bets[i] = 0;
+  //   this.game.roundBets[i] = 0;
+  // }
+  // //Identify Small and Big Blind player indexes
+  // smallBlind = this.dealer + 1;
+  // if (smallBlind >= this.players.length) {
+  //   smallBlind = 0;
+  // }
+  // bigBlind = this.dealer + 2;
+  // if (bigBlind >= this.players.length) {
+  //   bigBlind -= this.players.length;
+  // }
+  // //Force Blind Bets
+  // this.players[smallBlind].chips -= this.smallBlind;
+  // this.players[bigBlind].chips -= this.bigBlind;
+  // this.game.bets[smallBlind] = this.smallBlind;
+  // this.game.bets[bigBlind] = this.bigBlind;
+
+  // // get currentPlayer
+  // this.currentPlayer = this.dealer + 3;
+  // if (this.currentPlayer >= this.players.length) {
+  //   this.currentPlayer -= this.players.length;
+  // }
+
+  // this.eventEmitter.emit("newRound");
+};
+
+// @desc - trigger this after a round is complete
+// @params - tableID
+// returns null
+const initNewRound = tableID => {
+  // cycle dealer clockwise
+  let i;
+  this.dealer += 1;
+  if (this.dealer >= this.players.length) {
+    this.dealer = 0;
+  }
+  // set pot to 0,
+  this.game.pot = 0;
+  this.game.roundName = "Deal"; //Start the first round
+  this.game.betName = "bet"; //bet,raise,re-raise,cap
+  this.game.bets.splice(0, this.game.bets.length);
+  this.game.deck.splice(0, this.game.deck.length);
+  this.game.board.splice(0, this.game.board.length);
+  for (i = 0; i < this.players.length; i += 1) {
+    this.players[i].folded = false;
+    this.players[i].talked = false;
+    this.players[i].allIn = false;
+    this.players[i].cards.splice(0, this.players[i].cards.length);
+  }
+  fillDeck(this.game.deck);
+  this.NewRound();
+};
+
+// function to create and shuffle a deck of 52 cards
+const fillDeck = () => {
+  const deck = [];
+  deck.push("AS");
+  deck.push("KS");
+  deck.push("QS");
+  deck.push("JS");
+  deck.push("TS");
+  deck.push("9S");
+  deck.push("8S");
+  deck.push("7S");
+  deck.push("6S");
+  deck.push("5S");
+  deck.push("4S");
+  deck.push("3S");
+  deck.push("2S");
+  deck.push("AH");
+  deck.push("KH");
+  deck.push("QH");
+  deck.push("JH");
+  deck.push("TH");
+  deck.push("9H");
+  deck.push("8H");
+  deck.push("7H");
+  deck.push("6H");
+  deck.push("5H");
+  deck.push("4H");
+  deck.push("3H");
+  deck.push("2H");
+  deck.push("AD");
+  deck.push("KD");
+  deck.push("QD");
+  deck.push("JD");
+  deck.push("TD");
+  deck.push("9D");
+  deck.push("8D");
+  deck.push("7D");
+  deck.push("6D");
+  deck.push("5D");
+  deck.push("4D");
+  deck.push("3D");
+  deck.push("2D");
+  deck.push("AC");
+  deck.push("KC");
+  deck.push("QC");
+  deck.push("JC");
+  deck.push("TC");
+  deck.push("9C");
+  deck.push("8C");
+  deck.push("7C");
+  deck.push("6C");
+  deck.push("5C");
+  deck.push("4C");
+  deck.push("3C");
+  deck.push("2C");
+
+  //Shuffle the deck array with Fisher-Yates
+  var i, j, tempi, tempj;
+  for (i = 0; i < deck.length; i += 1) {
+    j = Math.floor(Math.random() * (i + 1));
+    tempi = deck[i];
+    tempj = deck[j];
+    deck[i] = tempj;
+    deck[j] = tempi;
+  }
+
+  return deck;
 };
 
 module.exports = { joinTableIfItExists, exitTable };

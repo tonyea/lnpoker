@@ -9,11 +9,12 @@ const game = require("./routes/api/game");
 
 // sockets
 const ioServer = require("./socket-server")(app);
-const sock_port = process.env.SOCKET_PORT || 8000; // Set socket port
-ioServer.listen(sock_port, () =>
-  console.log(`Socket listening on port ${sock_port}!`)
-);
-
+const sock_port = process.env.SOCKET_PORT || 8010; // Set socket port
+if (process.env.NODE_ENV !== "test") {
+  ioServer.listen(sock_port, () =>
+    console.log(`Socket listening on port ${sock_port}!`)
+  );
+}
 // Body parser middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

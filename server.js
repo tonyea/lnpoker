@@ -10,4 +10,7 @@ const pg = require("./db");
 // Set port
 const port = process.env.PORT || 5000;
 
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+//In a test environment, when running the server through Supertest, we do not really need to have the app listen on a network port
+if (process.env.NODE_ENV !== "test") {
+  app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+}
