@@ -1,4 +1,11 @@
-import { GAME_START, GAME_LOADING, GET_ERRORS } from "./types";
+import {
+  GAME_START,
+  GAME_LOADING,
+  GET_ERRORS,
+  ADD_MESSAGE,
+  MESSAGE_RECEIVE_SUCCESS
+} from "./types";
+
 import axios from "axios";
 
 export const getGame = () => async dispatch => {
@@ -43,9 +50,25 @@ export const setGameLoading = () => {
   };
 };
 
-// // Thunk to Emit message to socket before dispatching a receive message call to get messages from socket
-// export const emitMessage = msg => dispatch => {
-//   socket.emit("message", msg);
-//   // dispatch(addMessage(msg));
-//   console.log("message emitted to socket", msg);
-// };
+// Chat component actions
+
+export const receiveMessages = msgs => ({
+  type: MESSAGE_RECEIVE_SUCCESS,
+  logs: msgs
+});
+
+// // Emit message to socket
+export const emitMessage = (msg, socket) => {
+  socket.emit("message", msg);
+};
+
+// Add message to chat action creator
+export const addMessage = msg => ({
+  type: ADD_MESSAGE,
+  message: msg
+});
+
+// emit message to socket that a new player has been added
+export const newPlayerAdded = (socket, id, name) => {
+  socket.emit("new player", id, name);
+};

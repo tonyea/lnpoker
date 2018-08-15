@@ -1,7 +1,7 @@
 import React from "react";
 import ChatLog from "./ChatLog";
 import ChatInput from "./ChatInput";
-import { emitMessage } from "../../actions/chatActions";
+import { emitMessage } from "../../actions/gameActions";
 
 export const Chat = ({ chatLog, socket }) => (
   <div className="chat container">

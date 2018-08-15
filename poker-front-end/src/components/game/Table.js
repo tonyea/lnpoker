@@ -5,9 +5,13 @@ import Player from "./Player";
 import History from "./History";
 import Chat from "../chat/Chat";
 import { connect } from "react-redux";
-import { getGame, exitGame } from "../../actions/gameActions";
+import {
+  getGame,
+  exitGame,
+  receiveMessages,
+  newPlayerAdded
+} from "../../actions/gameActions";
 import PropTypes from "prop-types";
-import { receiveMessages } from "../../actions/chatActions";
 
 // socket
 import io from "socket.io-client";
@@ -24,6 +28,10 @@ class Table extends Component {
   componentDidMount() {
     // Set state of game when table is mounted
     this.props.getGame();
+
+    // emit message to socket that there is a new player
+    // console.log(this.props.user.id);
+    newPlayerAdded(this.state.socket, this.props.user.id, this.props.user.name);
   }
 
   componentWillUnmount() {
@@ -70,12 +78,17 @@ Table.propTypes = {
   ),
   receiveMessages: PropTypes.func.isRequired,
   getGame: PropTypes.func.isRequired,
-  exitGame: PropTypes.func.isRequired
+  exitGame: PropTypes.func.isRequired,
+  user: PropTypes.object.isRequired
 };
 
 const mapStateToProps = state => ({
   players: state.game.players,
-  chatLog: state.chat
+  chatLog: state.chat,
+  user: {
+    id: state.auth.user.id,
+    name: state.auth.user.username
+  }
 });
 
 const mapDispatchToProps = dispatch => ({
