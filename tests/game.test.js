@@ -5,23 +5,23 @@ const db = require("../db");
 
 describe("User Auth Tests", () => {
   // setup and teardown of DB
-  beforeAll(async () => {
+  beforeEach(async () => {
     try {
-      await db.query("BEGIN");
-      // await client.query("COMMIT");
+      await db.query("BEGIN;");
+      // await db.query("SELECT * FROM lnpoker.tables limit 1");
       await db.query("SAVEPOINT before_all_testing");
     } catch (e) {
       console.log(e);
     }
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     try {
+      // await db.query("ROLLBACK;");
       await db.query("ROLLBACK TO before_all_testing");
+      // await db.query("COMMIT");
     } catch (e) {
       console.log(e);
-    } finally {
-      db.release();
     }
   });
 
@@ -141,7 +141,7 @@ describe("User Auth Tests", () => {
     // If I am the first player at a table, I see a sign saying that the table is waiting for more players
     // The state of the game in the DB is 'waiting'
     test("User sees waiting warning if first at table", async () => {
-      // expect.assertions(3);
+      expect.assertions(3);
 
       // starting with fresh db for testing. order of deletion matters because of constraints
       await db.query("DELETE FROM lnpoker.user_table");
@@ -155,17 +155,30 @@ describe("User Auth Tests", () => {
       // check to see if response is error
       expect(res.statusCode).toBe(400);
       expect(res.body.players).toEqual("Not enough players");
+
+      // A game cannot be marked as started without the minimum number of players
+      const dbRes = await db.query("SELECT status from lnpoker.tables");
+
+      expect(dbRes.rows[0].status).toEqual("waiting");
     });
 
     // A game is marked as 'started' once the minimum number of players arrive
-    // test("User logs in, gets seated at a table", async () => {
-    //   expect.assertions(3);
-    // });
+    test("Minimum players arrive", async () => {
+      // expect.assertions(2);
 
-    // A game cannot be marked as started without the minimum number of players
-    // test("User logs in, gets seated at a table", async () => {
-    //   expect.assertions(3);
-    // });
+      const res = await request(app)
+        .post("/api/game")
+        .set("Authorization", player2.token)
+        .send();
+
+      expect(res.statusCode).toBe(200);
+
+      // console.log(res.body);
+
+      const dbRes = await db.query("SELECT status from lnpoker.tables");
+
+      expect(dbRes.rows[0].status).toEqual("started");
+    });
 
     // Once a game starts cards are shuffled and placed in a deck
     // Two cards are distributed to each player at the table

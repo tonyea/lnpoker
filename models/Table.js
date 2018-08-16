@@ -156,13 +156,13 @@ const exitTable = async userID => {
 // @params - tableID
 // returns null
 const newRound = async tableID => {
-  console.log("newRound on table, ", tableID);
+  // console.log("newRound on table, ", tableID);
   // deck will contain comma separated string of deck array
   const deck = "{" + fillDeck().join() + "}";
 
   await db.query(
     "UPDATE lnpoker.tables SET deck = $1 WHERE id=$2 RETURNING *",
-    [deck, res.rows[0].id]
+    [deck, tableID]
   );
 
   // // Add players in waiting list
