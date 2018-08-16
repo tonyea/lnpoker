@@ -31,7 +31,7 @@ router.post("/register", async (req, res) => {
   try {
     // if user doesn't exist, add him to DB
     const { rows } = await db.query(
-      "SELECT username, bank FROM lnpoker.users WHERE username = $1",
+      "SELECT username, bank FROM users WHERE username = $1",
       [userName]
     );
     if (rows.length > 0) {
@@ -48,7 +48,7 @@ router.post("/register", async (req, res) => {
         // Store hash in your password DB.
         // create user
         const returnedResult = await db.query(
-          "INSERT INTO lnpoker.users(username, password) VALUES ($1, $2) RETURNING username, created_at, bank",
+          "INSERT INTO users(username, password) VALUES ($1, $2) RETURNING username, created_at, bank",
           [userName, hash]
         );
         return res.json(returnedResult.rows[0]);
@@ -76,7 +76,7 @@ router.post("/login", async (req, res) => {
   try {
     // if user doesn't exist, add him to DB
     const { rows } = await db.query(
-      "SELECT id, username, password, bank FROM lnpoker.users WHERE username = $1",
+      "SELECT id, username, password, bank FROM users WHERE username = $1",
       [username]
     );
     if (rows.length < 1) {
@@ -115,7 +115,7 @@ router.post("/login", async (req, res) => {
 // @access  Public
 router.get("/:name", async (req, res) => {
   const { rows } = await db.query(
-    "SELECT username, bank FROM lnpoker.users WHERE username = $1",
+    "SELECT username, bank FROM users WHERE username = $1",
     [req.params.name]
   );
   res.json(rows[0]);

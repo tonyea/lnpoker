@@ -6,7 +6,7 @@ const { performance } = require("perf_hooks");
 // @return table if already created, else false
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
 const findTable = async () => {
-  const { rows } = await db.query("SELECT * FROM lnpoker.tables limit 1");
+  const { rows } = await db.query("SELECT * FROM tables limit 1");
 
   if (rows.length < 1) {
     return false;
@@ -19,9 +19,7 @@ const findTable = async () => {
 // @return table object without players array
 // @desc create a new table using default params instead of destructuring table arguments, start new round
 const createNewTable = async userID => {
-  const res = await db.query(
-    "INSERT INTO lnpoker.tables DEFAULT VALUES returning *"
-  );
+  const res = await db.query("INSERT INTO tables DEFAULT VALUES returning *");
 
   // auto join newly created table
   await joinTable(res.rows[0].id, userID);
@@ -36,17 +34,17 @@ const joinTable = async (tableID, userID) => {
   const errors = {};
   // append user id to table | auto join the table you create
   await db.query(
-    "INSERT INTO lnpoker.user_table(player_id, table_id) VALUES ($1, $2)",
+    "INSERT INTO user_table(player_id, table_id) VALUES ($1, $2)",
     [userID, tableID]
   );
 
   //If there is no current game and we have enough players, start a new game. Set status to started
   const tableRow = await db.query(
-    "SELECT status, minplayers from lnpoker.tables where id = $1",
+    "SELECT status, minplayers from tables where id = $1",
     [tableID]
   );
   const playersRows = await db.query(
-    "SELECT count(id) as numplayers from lnpoker.user_table where table_id = $1",
+    "SELECT count(id) as numplayers from user_table where table_id = $1",
     [tableID]
   );
 
@@ -70,10 +68,9 @@ const joinTable = async (tableID, userID) => {
     newRound(tableID);
 
     // set table status to started
-    await db.query(
-      "UPDATE lnpoker.tables SET status = 'started' where id = $1",
-      [tableID]
-    );
+    await db.query("UPDATE tables SET status = 'started' where id = $1", [
+      tableID
+    ]);
   }
 };
 
@@ -82,7 +79,7 @@ const joinTable = async (tableID, userID) => {
 // @desc return array of users found on table
 const getPlayersAtTable = async tableID => {
   const players = await db.query(
-    "SELECT username, dealer, chips, folded, allin, talked FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
+    "SELECT username, dealer, chips, folded, allin, talked FROM users INNER join user_table on users.id = user_table.player_id WHERE user_table.table_id = $1",
     [tableID]
   );
 
@@ -98,7 +95,7 @@ const getPlayersAtTable = async tableID => {
 // @desc return true if user is found on table, else false
 const isPlayerOnTable = async (userID, tableID) => {
   const result = await db.query(
-    "SELECT username FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.player_id = $1 and lnpoker.user_table.table_id = $2",
+    "SELECT username FROM users INNER join user_table on users.id = user_table.player_id WHERE user_table.player_id = $1 and user_table.table_id = $2",
     [userID, tableID]
   );
 
@@ -146,10 +143,9 @@ const joinTableIfItExists = async (cb, userID) => {
 // @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
 // returns errors or table data
 const exitTable = async userID => {
-  await db.query(
-    "DELETE FROM lnpoker.user_table WHERE lnpoker.user_table.player_id = $1",
-    [userID]
-  );
+  await db.query("DELETE FROM user_table WHERE user_table.player_id = $1", [
+    userID
+  ]);
 };
 
 // @desc - trigger this to start a new round
@@ -160,10 +156,10 @@ const newRound = async tableID => {
   // deck will contain comma separated string of deck array
   const deck = "{" + fillDeck().join() + "}";
 
-  await db.query(
-    "UPDATE lnpoker.tables SET deck = $1 WHERE id=$2 RETURNING *",
-    [deck, tableID]
-  );
+  await db.query("UPDATE tables SET deck = $1 WHERE id=$2 RETURNING *", [
+    deck,
+    tableID
+  ]);
 
   // // Add players in waiting list
   // var removeIndex = 0;

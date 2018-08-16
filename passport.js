@@ -16,7 +16,7 @@ module.exports = passport => {
       try {
         // find user based on token
         const { rows } = await db.query(
-          "SELECT id, username, bank FROM lnpoker.users WHERE id = $1",
+          "SELECT id, username, bank FROM users WHERE id = $1",
           [jwt_payload.id]
         );
         if (rows.length > 0) {

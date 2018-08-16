@@ -56,7 +56,7 @@ describe("User Auth Tests", () => {
       expect.assertions(2);
 
       const user = await db.query(
-        "SELECT username, password from lnpoker.users where username=$1",
+        "SELECT username, password from users where username=$1",
         [testusername]
       );
 

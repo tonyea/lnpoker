@@ -3,6 +3,9 @@ const bodyParser = require("body-parser");
 const app = express();
 const passport = require("passport");
 
+// include env variables
+require("dotenv").config();
+
 // get route files
 const users = require("./routes/api/users");
 const game = require("./routes/api/game");
