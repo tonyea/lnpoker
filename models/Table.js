@@ -33,6 +33,7 @@ const createNewTable = async userID => {
 // @return null
 // @desc add user's id to user_table and distribute his cards from deck
 const joinTable = async (tableID, userID) => {
+  const errors = {};
   // append user id to table | auto join the table you create
   await db.query(
     "INSERT INTO lnpoker.user_table(player_id, table_id) VALUES ($1, $2)",
@@ -55,11 +56,13 @@ const joinTable = async (tableID, userID) => {
     playersRows.rows.length > 0 ? parseInt(playersRows.rows[0].numplayers) : 0;
   // return error if we don't find table
   if (minPlayers === null) {
-    throw "No table found";
+    errors.table = "No table found";
+    throw errors;
   }
   // check if we have minimum number of players
   if (numPlayers < minPlayers) {
-    throw "Not enough players";
+    errors.players = "Not enough players";
+    throw errors;
   }
   // start new round if status is 'waiting'
   if (tableRow.rows[0].status === "waiting") {
@@ -79,7 +82,7 @@ const joinTable = async (tableID, userID) => {
 // @desc return array of users found on table
 const getPlayersAtTable = async tableID => {
   const players = await db.query(
-    "SELECT username, dealer, chips, folded, allin, talked, cards FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
+    "SELECT username, dealer, chips, folded, allin, talked FROM lnpoker.users INNER join lnpoker.user_table on lnpoker.users.id = lnpoker.user_table.player_id WHERE lnpoker.user_table.table_id = $1",
     [tableID]
   );
 

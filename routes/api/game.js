@@ -13,7 +13,7 @@ router.post(
     // callback function that returns error or table object
     const returnTable = (errors, tableFromCaller = {}) => {
       if (errors) {
-        console.log("errors", errors);
+        // console.log("errors", errors);
         res.status(400);
         return res.json(errors);
       }
