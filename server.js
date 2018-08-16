@@ -5,7 +5,7 @@ const app = require("./app");
 require("dotenv").config();
 
 // connecting Postgres
-const pg = require("./db");
+// const pg = require("./db");
 
 // Set port
 const port = process.env.PORT || 5000;
