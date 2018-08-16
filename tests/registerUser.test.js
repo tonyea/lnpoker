@@ -7,21 +7,11 @@ describe("User Auth Tests", () => {
   // setup and teardown of DB
   beforeAll(async () => {
     try {
-      await db.query("BEGIN");
-      // await client.query("COMMIT");
-      await db.query("SAVEPOINT before_all_testing");
+      await db.query("DELETE FROM user_table");
+      await db.query("DELETE FROM tables");
+      await db.query("DELETE FROM users");
     } catch (e) {
       console.log(e);
-    }
-  });
-
-  afterAll(async () => {
-    try {
-      await db.query("ROLLBACK TO before_all_testing");
-    } catch (e) {
-      console.log(e);
-    } finally {
-      db.release();
     }
   });
 

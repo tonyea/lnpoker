@@ -37,16 +37,6 @@ describe("Game Tests", () => {
     await loginUser(player5);
   });
 
-  // afterAll(async () => {
-  //   try {
-  //     await db.query("DELETE FROM user_table");
-  //     await db.query("DELETE FROM tables");
-  //     await db.query("DELETE FROM users");
-  //   } catch (e) {
-  //     console.log(e);
-  //   }
-  // });
-
   const registerUser = async player => {
     await request(app)
       .post("/api/users/register")
@@ -81,34 +71,42 @@ describe("Game Tests", () => {
   });
 
   test("User logs in, gets seated at a table", async () => {
-    // starting with fresh db for testing. order of deletion matters because of constraints
-    // await db.query("DELETE FROM user_table");
-    // await db.query("DELETE FROM tables");
+    expect.assertions(5);
 
-    expect.assertions(2);
-
-    await request(app)
+    const res = await request(app)
       .post("/api/game")
       .set("Authorization", player1.token)
       .send();
 
-    const dbres = await db.query(
+    // check to see if response is error. User sees waiting warning if first at table
+    expect(res.statusCode).toBe(400);
+    expect(res.body.players).toEqual("Not enough players");
+
+    // If I am the first player at a table, I see a sign saying that the table is waiting for more players
+    // The state of the game in the DB is 'waiting'
+    // A game cannot be marked as started without the minimum number of players
+    const dbRes = await db.query("SELECT status from tables");
+
+    expect(dbRes.rows[0].status).toEqual("waiting");
+
+    const dbres1 = await db.query(
       "SELECT username from user_table INNER JOIN users on users.id = user_table.player_id WHERE users.username =$1",
       [player1.playerName]
     );
-    expect(dbres.rows[0].username).toEqual(player1.playerName);
+    expect(dbres1.rows[0].username).toEqual(player1.playerName);
 
     // //User cannot sit at same table twice
     await request(app)
       .post("/api/game")
       .set("Authorization", player1.token)
       .send();
-    expect(dbres.rows.length).toBe(1);
+
+    expect(dbres1.rows.length).toBe(1);
   });
 
   // I can see other player's info once I join a table. I cannot see their cards.
   test("User can see basic info about other players", async () => {
-    // expect.assertions(2);
+    expect.assertions(2);
     await request(app)
       .post("/api/game")
       .set("Authorization", player1.token)
@@ -119,86 +117,63 @@ describe("Game Tests", () => {
       .set("Authorization", player2.token)
       .send();
 
-    // console.log("basic1 ", res.body);
-    // console.log("basic ", res.body.players);
-
     const dbres = await db.query("select * from user_table where table_id=$1", [
       res.body.id
     ]);
-    // console.log("db", dbres.rows);
-    // expect(
-    //   res.body.players.find(player => player.username === player2.playerName)
-    //     .username
-    // ).toEqual(player2.playerName);
 
-    // const otherPlayer = res.body.players.find(
-    //   player => player.username === player1.playerName
-    // );
+    expect(
+      res.body.players.find(player => player.username === player2.playerName)
+        .username
+    ).toEqual(player2.playerName);
 
-    // expect(otherPlayer).toEqual({
-    //   username: player1.playerName,
-    //   dealer: null,
-    //   chips: 1000,
-    //   folded: false,
-    //   allin: false,
-    //   talked: false
-    // });
+    const otherPlayer = res.body.players.find(
+      player => player.username === player1.playerName
+    );
+
+    expect(otherPlayer).toEqual({
+      username: player1.playerName,
+      dealer: null,
+      chips: 1000,
+      folded: false,
+      allin: false,
+      talked: false
+    });
   });
 
-  // // If I am the first player at a table, I see a sign saying that the table is waiting for more players
-  // // The state of the game in the DB is 'waiting'
-  // test("User sees waiting warning if first at table", async () => {
-  //   expect.assertions(3);
+  // A game is marked as 'started' once the minimum number of players arrive
+  test("Minimum players arrive", async () => {
+    expect.assertions(2);
 
-  //   const res = await request(app)
-  //     .post("/api/game")
-  //     .set("Authorization", player1.token)
-  //     .send();
+    // making request for third player but just as good for second
+    const res = await request(app)
+      .post("/api/game")
+      .set("Authorization", player3.token)
+      .send();
 
-  //   // check to see if response is error
-  //   expect(res.statusCode).toBe(400);
-  //   expect(res.body.players).toEqual("Not enough players");
+    expect(res.statusCode).toBe(200);
 
-  //   // A game cannot be marked as started without the minimum number of players
-  //   const dbRes = await db.query("SELECT status from tables");
+    const dbRes = await db.query("SELECT status from tables");
 
-  //   expect(dbRes.rows[0].status).toEqual("waiting");
-  // });
+    expect(dbRes.rows[0].status).toEqual("started");
+  });
 
-  // // A game is marked as 'started' once the minimum number of players arrive
-  // test("Minimum players arrive", async () => {
-  //   // expect.assertions(2);
-  //   await request(app)
-  //     .post("/api/game")
-  //     .set("Authorization", player1.token)
-  //     .send();
-  //   const res = await request(app)
-  //     .post("/api/game")
-  //     .set("Authorization", player2.token)
-  //     .send();
+  test("Game start", async () => {
+    expect.assertions(2);
 
-  //   expect(res.statusCode).toBe(200);
+    // Once a game starts cards are shuffled and placed in a deck
+    const dbRes = await db.query("SELECT deck from tables");
 
-  //   // console.log(res.body);
+    // deck should have 52 cards
+    expect(dbRes.rows[0].deck.length).toBe(52);
 
-  //   const dbRes = await db.query("SELECT status from tables");
+    // deck should have nine of hearts
+    expect(dbRes.rows[0].deck).toContain("9H");
 
-  //   expect(dbRes.rows[0].status).toEqual("started");
-  // });
+    // Two cards are distributed to each player at the table
 
-  // test("Game start", async () => {
-  //   // expect.assertions(3);
-
-  //   // Once a game starts cards are shuffled and placed in a deck
-  //   const dbRes = await db.query("SELECT * from tables");
-
-  //   console.log(dbRes.rows);
-  //   // expect(dbRes.rows[0].deck.length).toBe(52);
-
-  //   // Two cards are distributed to each player at the table
-  //   // I can see my own cards
-  //   // I cannot see my neighbors cards
-  // });
+    // I can see my own cards
+    // I cannot see my neighbors cards
+  });
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
   // test("User logs in, gets seated at a table", async () => {
