@@ -158,18 +158,38 @@ describe("Game Tests", () => {
   });
 
   test("Game start", async () => {
-    expect.assertions(2);
+    expect.assertions(4);
+
+    // there should be 3 players at this point
+    const dbRes0 = await db.query("SELECT count(player_id) from user_table");
+    expect(parseInt(dbRes0.rows[0].count)).toBe(3);
 
     // Once a game starts cards are shuffled and placed in a deck
     const dbRes = await db.query("SELECT deck from tables");
 
+    const deck = dbRes.rows[0].deck;
     // deck should have 52 cards
-    expect(dbRes.rows[0].deck.length).toBe(52);
+    expect(deck.length).toBe(52);
 
     // deck should have nine of hearts
-    expect(dbRes.rows[0].deck).toContain("9H");
+    expect(deck).toContain("9H");
 
     // Two cards are distributed to each player at the table
+    const dbRes1 = await db.query("SELECT cards from user_table");
+    const handsArray = dbRes1.rows;
+
+    // pop the latest cards from deck and check if they are in the hands of the players
+    const distributedHands = deck.slice(-6);
+    const dbHands = handsArray.map(hand => hand.cards.join());
+    console.log(dbHands, distributedHands);
+    expect(distributedHands).toEqual(dbHands);
+
+    // console.log(handsArray);
+    const has2each = handsArray.map(hand => hand.cards.length === 2);
+    // check for two cards
+    expect(has2each).toEqual([true, true, true]);
+    // check that deck no longer has the cards
+    expect(deck).not.toContain(handsArray[0].cards[0]);
 
     // I can see my own cards
     // I cannot see my neighbors cards

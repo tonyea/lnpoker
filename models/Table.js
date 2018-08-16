@@ -161,6 +161,27 @@ const newRound = async tableID => {
     tableID
   ]);
 
+  const dbRes = await db.query(
+    "SELECT player_id from user_table where table_id = $1",
+    [tableID]
+  );
+
+  // all players at table
+  const players = dbRes.rows;
+  // Deal 2 cards to each player
+  console.log("players, ", players);
+  for (i = 0; i < players.length; i += 1) {
+    const cards = "{" + "AH, JD" + "}";
+    await db.query("UPDATE user_table SET cards = $1 WHERE player_id=$2", [
+      cards,
+      players[i].player_id
+    ]);
+    // this.players[i].cards.push(this.game.deck.pop());
+    // this.players[i].cards.push(this.game.deck.pop());
+    // this.game.bets[i] = 0;
+    // this.game.roundBets[i] = 0;
+  }
+
   // // Add players in waiting list
   // var removeIndex = 0;
   // for (var i in this.playersToAdd) {
