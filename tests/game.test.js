@@ -117,10 +117,6 @@ describe("Game Tests", () => {
       .set("Authorization", player2.token)
       .send();
 
-    const dbres = await db.query("select * from user_table where table_id=$1", [
-      res.body.id
-    ]);
-
     expect(
       res.body.players.find(player => player.username === player2.playerName)
         .username
@@ -136,63 +132,78 @@ describe("Game Tests", () => {
       chips: 1000,
       folded: false,
       allin: false,
-      talked: false
+      talked: false,
+      cards: null
     });
   });
 
   // A game is marked as 'started' once the minimum number of players arrive
   test("Minimum players arrive", async () => {
-    expect.assertions(2);
+    expect.assertions(3);
 
-    // making request for third player but just as good for second
+    // making another request for second player but just as good for second
     const res = await request(app)
       .post("/api/game")
-      .set("Authorization", player3.token)
+      .set("Authorization", player2.token)
       .send();
 
     expect(res.statusCode).toBe(200);
 
-    const dbRes = await db.query("SELECT status from tables");
+    // check that there are only minimum number of players at the table
+    const dbRes0 = await db.query("select minplayers from tables");
+    const dbRes1 = await db.query("SELECT count(player_id) from user_table");
+    expect(parseInt(parseInt(dbRes0.rows[0].minplayers))).toBe(
+      parseInt(dbRes1.rows[0].count)
+    );
 
-    expect(dbRes.rows[0].status).toEqual("started");
+    const dbRes2 = await db.query("SELECT status from tables");
+
+    expect(dbRes2.rows[0].status).toEqual("started");
   });
 
   test("Game start", async () => {
-    expect.assertions(4);
+    expect.assertions(8);
 
-    // there should be 3 players at this point
-    const dbRes0 = await db.query("SELECT count(player_id) from user_table");
-    expect(parseInt(dbRes0.rows[0].count)).toBe(3);
-
-    // Once a game starts cards are shuffled and placed in a deck
-    const dbRes = await db.query("SELECT deck from tables");
-
+    // get minplayers to decide how many cards have been popped from deck
+    const dbRes = await db.query("select minplayers, deck from tables");
+    const numCardsPopped = parseInt(dbRes.rows[0].minplayers) * 2;
+    // Once a game starts, cards are shuffled and distributed, balance cards are placed in a deck
+    // deck should have 52 minus number of cards held in hand
     const deck = dbRes.rows[0].deck;
-    // deck should have 52 cards
-    expect(deck.length).toBe(52);
+    expect(deck.length).toBe(52 - numCardsPopped);
 
-    // deck should have nine of hearts
-    expect(deck).toContain("9H");
+    // log in as player 2 and I should see my cards in the response
+    const res = await request(app)
+      .post("/api/game")
+      .set("Authorization", player2.token)
+      .send();
+    const activeGame = res.body;
+    // game API should not respond with entire deck
+    expect(activeGame.deck).toBe(undefined);
 
-    // Two cards are distributed to each player at the table
+    // check that the deck in the db doesn't have the cards held by the players
     const dbRes1 = await db.query("SELECT cards from user_table");
-    const handsArray = dbRes1.rows;
+    const dbHands = dbRes1.rows.map(hand => hand.cards).reduce((arr, hand) => {
+      return arr.concat(hand);
+    }, []);
+    expect(deck).not.toContain(dbHands);
+    expect(deck.length + dbHands.length).toBe(52);
 
-    // pop the latest cards from deck and check if they are in the hands of the players
-    const distributedHands = deck.slice(-6);
-    const dbHands = handsArray.map(hand => hand.cards.join());
-    console.log(dbHands, distributedHands);
-    expect(distributedHands).toEqual(dbHands);
-
-    // console.log(handsArray);
-    const has2each = handsArray.map(hand => hand.cards.length === 2);
-    // check for two cards
-    expect(has2each).toEqual([true, true, true]);
-    // check that deck no longer has the cards
-    expect(deck).not.toContain(handsArray[0].cards[0]);
-
-    // I can see my own cards
-    // I cannot see my neighbors cards
+    // Check that two cards are distributed to each player at the table
+    expect(dbHands.length).toBe(numCardsPopped);
+    // check that player1's cards are not visible in response but player2's cards are since we are logged in as player2
+    expect(
+      activeGame.players.find(player => player.username === player1.playerName)
+        .cards
+    ).toBe(null);
+    expect(dbHands).toContain(
+      activeGame.players.find(player => player.username === player2.playerName)
+        .cards[0]
+    );
+    expect(dbHands).toContain(
+      activeGame.players.find(player => player.username === player2.playerName)
+        .cards[1]
+    );
   });
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards

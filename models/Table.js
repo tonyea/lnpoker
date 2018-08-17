@@ -6,7 +6,9 @@ const { performance } = require("perf_hooks");
 // @return table if already created, else false
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
 const findTable = async () => {
-  const { rows } = await db.query("SELECT * FROM tables limit 1");
+  const { rows } = await db.query(
+    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, betname, board, status FROM tables limit 1"
+  );
 
   if (rows.length < 1) {
     return false;
@@ -19,7 +21,9 @@ const findTable = async () => {
 // @return table object without players array
 // @desc create a new table using default params instead of destructuring table arguments, start new round
 const createNewTable = async userID => {
-  const res = await db.query("INSERT INTO tables DEFAULT VALUES returning *");
+  const res = await db.query(
+    "INSERT INTO tables DEFAULT VALUES returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, betname, board, status "
+  );
 
   // auto join newly created table
   await joinTable(res.rows[0].id, userID);
@@ -65,7 +69,7 @@ const joinTable = async (tableID, userID) => {
   // start new round if status is 'waiting'
   if (tableRow.rows[0].status === "waiting") {
     // start a new round
-    newRound(tableID);
+    await newRound(tableID);
 
     // set table status to started
     await db.query("UPDATE tables SET status = 'started' where id = $1", [
@@ -77,10 +81,19 @@ const joinTable = async (tableID, userID) => {
 // @params tableID
 // @return array
 // @desc return array of users found on table
-const getPlayersAtTable = async tableID => {
+const getPlayersAtTable = async (tableID, userID) => {
   const players = await db.query(
-    "SELECT username, dealer, chips, folded, allin, talked FROM users INNER join user_table on users.id = user_table.player_id WHERE user_table.table_id = $1",
-    [tableID]
+    `
+    SELECT username, dealer, chips, folded, allin, talked, null as cards
+    FROM users 
+    INNER join user_table on users.id = user_table.player_id
+    WHERE user_table.table_id=$1 and player_id!=$2
+    union
+    SELECT username, dealer, chips, folded, allin, talked, cards 
+    FROM users 
+    INNER join user_table on users.id = user_table.player_id
+    WHERE user_table.table_id=$1 and player_id=$2`,
+    [tableID, userID]
   );
 
   if (players.rows.length > 0) {
@@ -117,14 +130,14 @@ const joinTableIfItExists = async (cb, userID) => {
     if (!table) {
       table = await createNewTable(userID);
 
-      table.players = await getPlayersAtTable(table.id);
+      table.players = await getPlayersAtTable(table.id, userID);
 
       return cb(null, table);
     }
 
     // return table if player is already on table
     if (await isPlayerOnTable(userID, table.id)) {
-      table.players = await getPlayersAtTable(table.id);
+      table.players = await getPlayersAtTable(table.id, userID);
       return cb(null, table);
     }
 
@@ -132,7 +145,7 @@ const joinTableIfItExists = async (cb, userID) => {
     // add the user to the table
     await joinTable(table.id, userID);
 
-    table.players = await getPlayersAtTable(table.id);
+    table.players = await getPlayersAtTable(table.id, userID);
   } catch (error) {
     return cb(error);
   }
@@ -152,26 +165,22 @@ const exitTable = async userID => {
 // @params - tableID
 // returns null
 const newRound = async tableID => {
-  // console.log("newRound on table, ", tableID);
-  // deck will contain comma separated string of deck array
-  const deck = "{" + fillDeck().join() + "}";
-
-  await db.query("UPDATE tables SET deck = $1 WHERE id=$2 RETURNING *", [
-    deck,
-    tableID
-  ]);
-
+  // get all players at table
   const dbRes = await db.query(
     "SELECT player_id from user_table where table_id = $1",
     [tableID]
   );
-
   // all players at table
   const players = dbRes.rows;
+
+  // deck will contain 52 cards to start
+  const deck = fillDeck();
+
   // Deal 2 cards to each player
-  console.log("players, ", players);
+  // console.log("players, ", players);
   for (i = 0; i < players.length; i += 1) {
-    const cards = "{" + "AH, JD" + "}";
+    const cards = "{" + deck.pop() + "," + deck.pop() + "}";
+    // console.log("popped cards, ", cards);
     await db.query("UPDATE user_table SET cards = $1 WHERE player_id=$2", [
       cards,
       players[i].player_id
@@ -182,6 +191,11 @@ const newRound = async tableID => {
     // this.game.roundBets[i] = 0;
   }
 
+  // persist remaining deck
+  await db.query("UPDATE tables SET deck = $1 WHERE id=$2 RETURNING *", [
+    "{" + deck.join() + "}",
+    tableID
+  ]);
   // // Add players in waiting list
   // var removeIndex = 0;
   // for (var i in this.playersToAdd) {
