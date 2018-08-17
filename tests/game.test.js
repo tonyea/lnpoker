@@ -162,7 +162,7 @@ describe("Game Tests", () => {
   });
 
   test("Game start", async () => {
-    expect.assertions(8);
+    expect.assertions(11);
 
     // get minplayers to decide how many cards have been popped from deck
     const dbRes = await db.query("select minplayers, deck from tables");
@@ -202,6 +202,25 @@ describe("Game Tests", () => {
     );
     expect(dbHands).toContain(
       activeGame.players.find(player => player.username === player2.playerName)
+        .cards[1]
+    );
+
+    // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
+    const res2 = await request(app)
+      .post("/api/game")
+      .set("Authorization", player1.token)
+      .send();
+    const activeGame2 = res2.body;
+    expect(
+      activeGame2.players.find(player => player.username === player2.playerName)
+        .cards
+    ).toBe(null);
+    expect(dbHands).toContain(
+      activeGame2.players.find(player => player.username === player1.playerName)
+        .cards[0]
+    );
+    expect(dbHands).toContain(
+      activeGame2.players.find(player => player.username === player1.playerName)
         .cards[1]
     );
   });

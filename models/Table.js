@@ -177,10 +177,10 @@ const newRound = async tableID => {
   const deck = fillDeck();
 
   // Deal 2 cards to each player
-  // console.log("players, ", players);
+  console.log("players, ", players);
   for (i = 0; i < players.length; i += 1) {
     const cards = "{" + deck.pop() + "," + deck.pop() + "}";
-    // console.log("popped cards, ", cards);
+    console.log("popped cards, ", cards);
     await db.query("UPDATE user_table SET cards = $1 WHERE player_id=$2", [
       cards,
       players[i].player_id

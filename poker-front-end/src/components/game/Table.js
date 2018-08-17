@@ -21,7 +21,7 @@ class Table extends Component {
     super(props);
 
     this.state = {
-      socket: io("http://localhost:8000/")
+      socket: io("http://localhost:8010/")
     };
   }
 
@@ -39,8 +39,12 @@ class Table extends Component {
     this.props.exitGame();
   }
   render() {
-    const { chatLog, receiveMessages, players } = this.props;
+    const { chatLog, receiveMessages, players, user } = this.props;
+    const myInfo = players
+      ? players.find(player => player.username === user.name)
+      : [];
 
+    console.log(myInfo);
     // show newly broadcast chat messages
     this.state.socket.on("chat message", msgs => {
       receiveMessages(msgs);
@@ -52,7 +56,7 @@ class Table extends Component {
 
         <Board />
 
-        <Player />
+        <Player myInfo={myInfo} />
 
         <Chat socket={this.state.socket} chatLog={chatLog} />
 
