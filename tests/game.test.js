@@ -225,6 +225,7 @@ describe("Game Tests", () => {
     );
 
     // User can see list of game rules - small blind, big blind, max buy in, min buy in, min players, max players
+    //User can see game information: pot, round name, betname, gamestate
     expect(activeGame2).toEqual(
       expect.objectContaining({
         smallblind: expect.any(Number),
@@ -232,7 +233,11 @@ describe("Game Tests", () => {
         minplayers: expect.any(Number),
         maxplayers: expect.any(Number),
         minbuyin: expect.any(Number),
-        maxbuyin: expect.any(Number)
+        maxbuyin: expect.any(Number),
+        pot: expect.any(Number),
+        roundname: expect.any(String),
+        betname: expect.any(String),
+        status: expect.any(String)
       })
     );
   });

@@ -35,7 +35,7 @@ class Table extends Component {
     const { players, isFetching, ...rest } = this.props.game;
 
     // loading indicator
-    if (isFetching && players === undefined) {
+    if (isFetching && !players) {
       return <p> Loading </p>;
     }
 

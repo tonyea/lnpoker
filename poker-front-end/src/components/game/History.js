@@ -11,6 +11,10 @@ export default props => (
       <div>Max Players: {props.maxplayers}</div>
       <div>Min Buy In: {props.minbuyin}</div>
       <div>Max Buy In: {props.maxbuyin}</div>
+      <div>Pot: {props.pot}</div>
+      <div>Round Name: {props.roundname}</div>
+      <div>Bet Name: {props.betname}</div>
+      <div>Status: {props.status}</div>
     </div>
   </div>
 );
