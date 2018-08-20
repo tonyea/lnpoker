@@ -5,12 +5,8 @@ import Player from "./Player";
 import History from "./History";
 import Chat from "../chat/Chat";
 import { connect } from "react-redux";
-import {
-  getGame,
-  exitGame,
-  receiveMessages,
-  newPlayerAdded
-} from "../../actions/gameActions";
+import * as actions from "../../actions/gameActions";
+import { getIsFetching } from "../../reducers";
 import PropTypes from "prop-types";
 
 // socket
@@ -27,10 +23,7 @@ class Table extends Component {
 
   componentDidMount() {
     // Set state of game when table is mounted
-    this.props.getGame();
-
-    // emit message to socket that there is a new player
-    newPlayerAdded(this.state.socket, this.props.user.id, this.props.user.name);
+    this.props.fetchGameData();
   }
 
   componentWillUnmount() {
@@ -39,7 +32,13 @@ class Table extends Component {
   }
   render() {
     const { chatLog, receiveMessages, user } = this.props;
-    const { players, ...rest } = this.props.game;
+    const { players, isFetching, ...rest } = this.props.game;
+
+    // loading indicator
+    if (isFetching && players === undefined) {
+      return <p> Loading </p>;
+    }
+
     const myInfo = players
       ? players.find(player => player.username === user.name)
       : [];
@@ -79,13 +78,14 @@ Table.propTypes = {
     }).isRequired
   ).isRequired,
   receiveMessages: PropTypes.func.isRequired,
-  getGame: PropTypes.func.isRequired,
+  fetchGameData: PropTypes.func.isRequired,
   exitGame: PropTypes.func.isRequired,
   user: PropTypes.object.isRequired
 };
 
 const mapStateToProps = state => ({
   game: state.game,
+  isFetching: getIsFetching(state),
   chatLog: state.chat,
   user: {
     id: state.auth.user.id,
@@ -93,13 +93,7 @@ const mapStateToProps = state => ({
   }
 });
 
-const mapDispatchToProps = dispatch => ({
-  getGame: () => dispatch(getGame()),
-  exitGame: () => dispatch(exitGame()),
-  receiveMessages: msgs => dispatch(receiveMessages(msgs))
-});
-
 export default connect(
   mapStateToProps,
-  mapDispatchToProps
+  actions
 )(Table);

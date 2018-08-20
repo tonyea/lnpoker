@@ -1,16 +1,21 @@
-import { SET_GAME_STATE } from "../actions/types";
+import { RECEIVE_GAME_DATA, REQUEST_GAME_DATA } from "../actions/types";
 
 const initialState = {
   //
 };
 
-export default function(state = initialState, action) {
+const gameReducer = (state = initialState, action) => {
   switch (action.type) {
+    case REQUEST_GAME_DATA:
+      return { ...state, isFetching: true };
     // add game to state
-    case SET_GAME_STATE:
-      // console.log("reducer", action);
-      return action.game;
+    case RECEIVE_GAME_DATA:
+      return { ...state, ...action.game, isFetching: false };
     default:
       return state;
   }
-}
+};
+
+export default gameReducer;
+
+export const getIsFetching = state => state.isFetching;

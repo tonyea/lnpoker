@@ -1,6 +1,6 @@
 import {
-  SET_GAME_STATE,
-  GAME_LOADING,
+  REQUEST_GAME_DATA,
+  RECEIVE_GAME_DATA,
   GET_ERRORS,
   ADD_MESSAGE,
   MESSAGE_RECEIVE_SUCCESS
@@ -8,14 +8,12 @@ import {
 
 import axios from "axios";
 
-export const getGame = () => async dispatch => {
-  // dispatch(setGameLoading());
-
-  // also dispatch new user to socket?
+export const fetchGameData = () => async dispatch => {
+  dispatch(requestGameData());
 
   try {
     const res = await axios.post("/api/game");
-    dispatch(setNewGameState(res.data));
+    dispatch(receiveGameData(res.data));
   } catch (error) {
     dispatch({
       type: GET_ERRORS,
@@ -26,7 +24,7 @@ export const getGame = () => async dispatch => {
 
 export const exitGame = () => async dispatch => {
   // update local game state
-  dispatch(setNewGameState({}));
+  dispatch(receiveGameData({}));
   try {
     await axios.post("api/game/leave");
     // console.log(res);
@@ -38,15 +36,15 @@ export const exitGame = () => async dispatch => {
   }
 };
 
-export const setNewGameState = gameFromServer => ({
-  type: SET_GAME_STATE,
+const receiveGameData = gameFromServer => ({
+  type: RECEIVE_GAME_DATA,
   game: gameFromServer
 });
 
 // Game loading
-export const setGameLoading = () => {
+const requestGameData = () => {
   return {
-    type: GAME_LOADING
+    type: REQUEST_GAME_DATA
   };
 };
 
@@ -68,7 +66,7 @@ export const addMessage = msg => ({
   message: msg
 });
 
-// emit message to socket that a new player has been added
-export const newPlayerAdded = (socket, id, name) => {
-  socket.emit("new player", id, name);
-};
+// // emit message to socket that a new player has been added
+// export const newPlayerAdded = (socket, id, name) => {
+//   socket.emit("new player", id, name);
+// };
