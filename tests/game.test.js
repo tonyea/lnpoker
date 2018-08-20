@@ -162,7 +162,7 @@ describe("Game Tests", () => {
   });
 
   test("Game start", async () => {
-    expect.assertions(11);
+    expect.assertions(12);
 
     // get minplayers to decide how many cards have been popped from deck
     const dbRes = await db.query("select minplayers, deck from tables");
@@ -223,7 +223,22 @@ describe("Game Tests", () => {
       activeGame2.players.find(player => player.username === player1.playerName)
         .cards[1]
     );
+
+    // User can see list of game rules - small blind, big blind, max buy in, min buy in, min players, max players
+    expect(activeGame2).toEqual(
+      expect.objectContaining({
+        smallblind: expect.any(Number),
+        bigblind: expect.any(Number),
+        minplayers: expect.any(Number),
+        maxplayers: expect.any(Number),
+        minbuyin: expect.any(Number),
+        maxbuyin: expect.any(Number)
+      })
+    );
   });
+
+  // Big blinds
+  //
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
   // test("User logs in, gets seated at a table", async () => {

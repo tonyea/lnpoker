@@ -23,8 +23,6 @@ export default props => {
     <div className="row player-row">
       <div className="col-sm">Player Info</div>
       <div className="col-sm">{cardRows}</div>
-      <div className="col-sm">Pot Info</div>
-      <div className="col-sm">Game Info</div>
     </div>
   );
 };

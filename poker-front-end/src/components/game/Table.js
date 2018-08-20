@@ -30,7 +30,6 @@ class Table extends Component {
     this.props.getGame();
 
     // emit message to socket that there is a new player
-    // console.log(this.props.user.id);
     newPlayerAdded(this.state.socket, this.props.user.id, this.props.user.name);
   }
 
@@ -39,13 +38,12 @@ class Table extends Component {
     this.props.exitGame();
   }
   render() {
-    const { chatLog, receiveMessages, players, user } = this.props;
+    const { chatLog, receiveMessages, user } = this.props;
+    const { players, ...rest } = this.props.game;
     const myInfo = players
       ? players.find(player => player.username === user.name)
       : [];
 
-    console.log(myInfo);
-    // show newly broadcast chat messages
     this.state.socket.on("chat message", msgs => {
       receiveMessages(msgs);
     });
@@ -60,7 +58,7 @@ class Table extends Component {
 
         <Chat socket={this.state.socket} chatLog={chatLog} />
 
-        <History />
+        <History {...rest} />
       </div>
     );
   }
@@ -79,7 +77,7 @@ Table.propTypes = {
       username: PropTypes.string.isRequired,
       chips: PropTypes.number.isRequired
     }).isRequired
-  ),
+  ).isRequired,
   receiveMessages: PropTypes.func.isRequired,
   getGame: PropTypes.func.isRequired,
   exitGame: PropTypes.func.isRequired,
@@ -87,7 +85,7 @@ Table.propTypes = {
 };
 
 const mapStateToProps = state => ({
-  players: state.game.players,
+  game: state.game,
   chatLog: state.chat,
   user: {
     id: state.auth.user.id,
