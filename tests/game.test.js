@@ -129,7 +129,8 @@ describe("Game Tests", () => {
     expect(otherPlayer).toEqual({
       username: player1.playerName,
       dealer: true,
-      chips: 100000,
+      chips: 98000,
+      bet: 2000,
       folded: false,
       allin: false,
       talked: false,
@@ -228,9 +229,10 @@ describe("Game Tests", () => {
     expect(p1bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
     expect(p2bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
     // User has blind bets forced - update bets array. Player 1 is big blind, player 2 is smallblind
-    expect(activeGame.bets).toBe([activeGame.bigblind, activeGame.smallblind]);
     expect(game1_player1.chips).toBe(100000 - activeGame.bigblind);
     expect(game1_player2.chips).toBe(100000 - activeGame.smallblind);
+    expect(game1_player1.bet).toBe(activeGame.bigblind);
+    expect(game1_player2.bet).toBe(activeGame.smallblind);
 
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
     const res2 = await request(app)

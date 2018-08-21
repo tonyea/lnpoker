@@ -83,6 +83,12 @@ const joinTable = async (tableID, userID) => {
   }
   // start new round if status is 'waiting'
   if (tableRow.rows[0].status === "waiting") {
+    // First user at table is identified as dealer and everyone else is not a dealer by default. Will cycle dealer each round
+    await db.query(
+      "UPDATE user_table SET dealer = true WHERE table_id=$1 and id=(SELECT id FROM user_table WHERE table_id=$1 ORDER BY id LIMIT 1)",
+      [tableID]
+    );
+
     // start a new round
     await newRound(tableID);
 
@@ -99,12 +105,12 @@ const joinTable = async (tableID, userID) => {
 const getPlayersAtTable = async (tableID, userID) => {
   const players = await db.query(
     `
-    SELECT username, dealer, chips, folded, allin, talked, null as cards
+    SELECT username, dealer, chips, folded, allin, talked, bet, null as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
     union
-    SELECT username, dealer, chips, folded, allin, talked, cards 
+    SELECT username, dealer, chips, folded, allin, talked, bet, cards 
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id=$2`,
@@ -204,7 +210,7 @@ const exitTable = async userID => {
 const newRound = async tableID => {
   // get all players at table
   const dbRes = await db.query(
-    "SELECT player_id from user_table where table_id = $1",
+    "SELECT player_id, dealer from user_table where table_id = $1",
     [tableID]
   );
   // all players at table
@@ -225,13 +231,29 @@ const newRound = async tableID => {
     // this.game.roundBets[i] = 0;
   }
 
-  // First user at table is identified as dealer and everyone else should not be a dealer
-  await db.query("UPDATE user_table SET dealer = true WHERE player_id=$1", [
-    players[0].player_id
-  ]);
-  await db.query("UPDATE user_table SET dealer = false WHERE player_id!=$1", [
-    players[0].player_id
-  ]);
+  // Force Blind Bets
+  // find small blind user and small blind amount
+  const dealerIndex = players.findIndex(player => player.dealer === true);
+  //Identify Small and Big Blind player indexes
+  let smallBlindIndex = dealerIndex + 1;
+  if (smallBlindIndex >= players.length) {
+    smallBlindIndex = 0;
+  }
+  let bigBlindIndex = dealerIndex + 2;
+  if (bigBlindIndex >= players.length) {
+    bigBlindIndex -= players.length;
+  }
+  const smallBlindPlayerID = players[smallBlindIndex].player_id;
+  const bigBlindPlayerID = players[bigBlindIndex].player_id;
+  // deduct small blind amount from small blind user
+  await db.query(
+    "UPDATE user_table SET chips = chips-(SELECT smallblind from TABLES WHERE id=$2), bet=(SELECT smallblind from TABLES WHERE id=$2) WHERE player_id=$1",
+    [smallBlindPlayerID, tableID]
+  );
+  await db.query(
+    "UPDATE user_table SET chips = chips-(SELECT bigblind from TABLES WHERE id=$2), bet=(SELECT bigblind from TABLES WHERE id=$2) WHERE player_id=$1",
+    [bigBlindPlayerID, tableID]
+  );
 
   // persist remaining deck
   await db.query("UPDATE tables SET deck = $1 WHERE id=$2 RETURNING *", [
