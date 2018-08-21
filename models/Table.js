@@ -1,7 +1,5 @@
 const db = require("../db");
 
-const { performance } = require("perf_hooks");
-
 // @params NA
 // @return table if already created, else false
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
@@ -31,15 +29,32 @@ const createNewTable = async userID => {
   return res.rows[0];
 };
 
+const buyIn = async (userID, tableID) => {
+  const res = await db.query("SELECT minbuyin from TABLES WHERE id=$1", [
+    tableID
+  ]);
+  const buyIn = res.rows[0].minbuyin;
+  // withdraw from bank
+  await db.query("UPDATE users SET bank = bank - $2 WHERE id=$1", [
+    userID,
+    buyIn
+  ]);
+
+  return buyIn;
+};
+
 // @params tableID and userID
 // @return null
 // @desc add user's id to user_table and distribute his cards from deck
 const joinTable = async (tableID, userID) => {
   const errors = {};
-  // append user id to table | auto join the table you create
+
+  const buyin = await buyIn(userID, tableID);
+
+  // append user id to table along with chips from bank | auto join the table you create
   await db.query(
-    "INSERT INTO user_table(player_id, table_id) VALUES ($1, $2)",
-    [userID, tableID]
+    "INSERT INTO user_table(player_id, table_id, chips) VALUES ($1, $2, $3)",
+    [userID, tableID, buyin]
   );
 
   //If there is no current game and we have enough players, start a new game. Set status to started
@@ -78,7 +93,7 @@ const joinTable = async (tableID, userID) => {
   }
 };
 
-// @params tableID
+// @params tableID, userID
 // @return array
 // @desc return array of users found on table
 const getPlayersAtTable = async (tableID, userID) => {

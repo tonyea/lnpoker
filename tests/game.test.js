@@ -129,7 +129,7 @@ describe("Game Tests", () => {
     expect(otherPlayer).toEqual({
       username: player1.playerName,
       dealer: true,
-      chips: 1000,
+      chips: 100000,
       folded: false,
       allin: false,
       talked: false,
@@ -193,47 +193,44 @@ describe("Game Tests", () => {
 
     // Check that two cards are distributed to each player at the table
     expect(dbHands.length).toBe(numCardsPopped);
+
+    const game1_player1 = activeGame.players.find(
+      player => player.username === player1.playerName
+    );
+    const game1_player2 = activeGame.players.find(
+      player => player.username === player2.playerName
+    );
     // check that player1's cards are not visible in response but player2's cards are since we are logged in as player2
-    expect(
-      activeGame.players.find(player => player.username === player1.playerName)
-        .cards
-    ).toBe(null);
-    expect(dbHands).toContain(
-      activeGame.players.find(player => player.username === player2.playerName)
-        .cards[0]
-    );
-    expect(dbHands).toContain(
-      activeGame.players.find(player => player.username === player2.playerName)
-        .cards[1]
-    );
+    expect(game1_player1.cards).toBe(null);
+    expect(dbHands).toContain(game1_player2.cards[0]);
+    expect(dbHands).toContain(game1_player2.cards[1]);
 
     // First user at table is identified as dealer and everyone else should not be a dealer
-    expect(
-      activeGame.players.find(player => player.username === player1.playerName)
-        .dealer
-    ).toBe(true);
-    expect(
-      activeGame.players.find(player => player.username !== player1.playerName)
-        .dealer
-    ).toBe(false);
+    expect(game1_player1.dealer).toBe(true);
+    expect(game1_player2.dealer).toBe(false);
 
     // First player after dealer is identified as small blind, next as big blind. So in 2 player game, p1 is dealer, p2 is sb, p1 is bb
-    expect(
-      activeGame.players.find(player => player.username === player1.playerName)
-        .isSmallBlind
-    ).toBe(false);
-    expect(
-      activeGame.players.find(player => player.username === player2.playerName)
-        .isSmallBlind
-    ).toBe(true);
-    expect(
-      activeGame.players.find(player => player.username === player1.playerName)
-        .isBigBlind
-    ).toBe(true);
-    expect(
-      activeGame.players.find(player => player.username === player2.playerName)
-        .isBigBlind
-    ).toBe(false);
+    expect(game1_player1.isSmallBlind).toBe(false);
+    expect(game1_player2.isSmallBlind).toBe(true);
+    expect(game1_player1.isBigBlind).toBe(true);
+    expect(game1_player2.isBigBlind).toBe(false);
+
+    // User has chips removed for buy in
+    const buyinRes = await db.query("SELECT minbuyin from tables limit 1");
+    const p1bankRes = await db.query(
+      "SELECT bank from users where username = $1",
+      [player1.playerName]
+    );
+    const p2bankRes = await db.query(
+      "SELECT bank from users where username = $1",
+      [player2.playerName]
+    );
+    expect(p1bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
+    expect(p2bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
+    // User has blind bets forced - update bets array. Player 1 is big blind, player 2 is smallblind
+    expect(activeGame.bets).toBe([activeGame.bigblind, activeGame.smallblind]);
+    expect(game1_player1.chips).toBe(100000 - activeGame.bigblind);
+    expect(game1_player2.chips).toBe(100000 - activeGame.smallblind);
 
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
     const res2 = await request(app)
@@ -241,18 +238,15 @@ describe("Game Tests", () => {
       .set("Authorization", player1.token)
       .send();
     const activeGame2 = res2.body;
-    expect(
-      activeGame2.players.find(player => player.username === player2.playerName)
-        .cards
-    ).toBe(null);
-    expect(dbHands).toContain(
-      activeGame2.players.find(player => player.username === player1.playerName)
-        .cards[0]
+    const game2_player1 = activeGame2.players.find(
+      player => player.username === player1.playerName
     );
-    expect(dbHands).toContain(
-      activeGame2.players.find(player => player.username === player1.playerName)
-        .cards[1]
+    const game2_player2 = activeGame2.players.find(
+      player => player.username === player2.playerName
     );
+    expect(game2_player2.cards).toBe(null);
+    expect(dbHands).toContain(game2_player1.cards[0]);
+    expect(dbHands).toContain(game2_player1.cards[1]);
 
     // User can see list of game rules - small blind, big blind, max buy in, min buy in, min players, max players
     //User can see game information: pot, round name, betname, gamestate
@@ -269,10 +263,6 @@ describe("Game Tests", () => {
         betname: expect.any(String),
         status: expect.any(String)
       })
-
-      // User has chips removed for buy in
-
-      // User has blind bets forced - update bets array
 
       // First player is identified and highlighted
     );
