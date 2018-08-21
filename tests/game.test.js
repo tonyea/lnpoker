@@ -133,7 +133,9 @@ describe("Game Tests", () => {
       folded: false,
       allin: false,
       talked: false,
-      cards: null
+      cards: null,
+      isBigBlind: true,
+      isSmallBlind: false
     });
   });
 
@@ -162,7 +164,7 @@ describe("Game Tests", () => {
   });
 
   test("Game start", async () => {
-    expect.assertions(14);
+    // expect.assertions(14);
 
     // get minplayers to decide how many cards have been popped from deck
     const dbRes = await db.query("select minplayers, deck from tables");
@@ -215,6 +217,24 @@ describe("Game Tests", () => {
         .dealer
     ).toBe(false);
 
+    // First player after dealer is identified as small blind, next as big blind. So in 2 player game, p1 is dealer, p2 is sb, p1 is bb
+    expect(
+      activeGame.players.find(player => player.username === player1.playerName)
+        .isSmallBlind
+    ).toBe(false);
+    expect(
+      activeGame.players.find(player => player.username === player2.playerName)
+        .isSmallBlind
+    ).toBe(true);
+    expect(
+      activeGame.players.find(player => player.username === player1.playerName)
+        .isBigBlind
+    ).toBe(true);
+    expect(
+      activeGame.players.find(player => player.username === player2.playerName)
+        .isBigBlind
+    ).toBe(false);
+
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
     const res2 = await request(app)
       .post("/api/game")
@@ -249,8 +269,6 @@ describe("Game Tests", () => {
         betname: expect.any(String),
         status: expect.any(String)
       })
-
-      // User is identified as small or big blind
 
       // User has chips removed for buy in
 

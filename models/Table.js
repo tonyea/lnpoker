@@ -96,8 +96,30 @@ const getPlayersAtTable = async (tableID, userID) => {
     [tableID, userID]
   );
 
-  if (players.rows.length > 0) {
-    return players.rows;
+  const playersArray = players.rows;
+  if (playersArray.length > 0) {
+    // First player after dealer is identified as small blind, next as big blind. So in 2 player game, p1 is dealer, p2 is sb, p1 is bb
+    // default all to false
+    playersArray.map(player => {
+      player.isSmallBlind = false;
+      player.isBigBlind = false;
+    });
+    const dealerIndex = playersArray.findIndex(
+      player => player.dealer === true
+    );
+
+    //Identify Small and Big Blind player indexes
+    let smallBlindIndex = dealerIndex + 1;
+    if (smallBlindIndex >= playersArray.length) {
+      smallBlindIndex = 0;
+    }
+    let bigBlindIndex = dealerIndex + 2;
+    if (bigBlindIndex >= playersArray.length) {
+      bigBlindIndex -= playersArray.length;
+    }
+    playersArray[smallBlindIndex].isSmallBlind = true;
+    playersArray[bigBlindIndex].isBigBlind = true;
+    return playersArray;
   }
   // else return empty array
   return [];
