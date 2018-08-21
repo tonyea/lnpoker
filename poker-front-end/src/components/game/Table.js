@@ -38,9 +38,9 @@ class Table extends Component {
       return <p> Loading </p>;
     }
 
-    const myInfo = players
-      ? players.find(player => player.username === user.name)
-      : [];
+    const opponents = players.filter(player => player.username !== user.name);
+
+    const myInfo = players.find(player => player.username === user.name);
 
     this.state.socket.on("chat message", msgs => {
       receiveMessages(msgs);
@@ -48,7 +48,7 @@ class Table extends Component {
 
     return (
       <div className="container table-container">
-        <Opponents players={players || []} />
+        <Opponents opponents={opponents} />
 
         <Board {...rest} />
 
@@ -66,12 +66,6 @@ Table.propTypes = {
       message: PropTypes.string.isRequired,
       author: PropTypes.string.isRequired,
       sendDate: PropTypes.number.isRequired
-    }).isRequired
-  ),
-  players: PropTypes.arrayOf(
-    PropTypes.shape({
-      username: PropTypes.string.isRequired,
-      chips: PropTypes.number.isRequired
     }).isRequired
   ),
   receiveMessages: PropTypes.func.isRequired,
