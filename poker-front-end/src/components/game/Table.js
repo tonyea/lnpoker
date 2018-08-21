@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
-import History from "./History";
 import Chat from "../chat/Chat";
 import { connect } from "react-redux";
 import * as actions from "../../actions/gameActions";
@@ -28,14 +27,14 @@ class Table extends Component {
 
   componentWillUnmount() {
     // remove player from state when leaving table
-    this.props.exitGame();
+    // this.props.exitGame();
   }
   render() {
     const { chatLog, receiveMessages, user } = this.props;
     const { players, isFetching, ...rest } = this.props.game;
 
     // loading indicator
-    if (isFetching && !players) {
+    if (isFetching || !rest.smallblind) {
       return <p> Loading </p>;
     }
 
@@ -51,13 +50,11 @@ class Table extends Component {
       <div className="container table-container">
         <Opponents players={players || []} />
 
-        <Board />
+        <Board {...rest} />
 
         <Player myInfo={myInfo} />
 
         <Chat socket={this.state.socket} chatLog={chatLog} />
-
-        <History {...rest} />
       </div>
     );
   }
@@ -76,10 +73,10 @@ Table.propTypes = {
       username: PropTypes.string.isRequired,
       chips: PropTypes.number.isRequired
     }).isRequired
-  ).isRequired,
+  ),
   receiveMessages: PropTypes.func.isRequired,
   fetchGameData: PropTypes.func.isRequired,
-  exitGame: PropTypes.func.isRequired,
+  // exitGame: PropTypes.func.isRequired,
   user: PropTypes.object.isRequired
 };
 

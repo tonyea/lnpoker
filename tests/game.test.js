@@ -239,11 +239,25 @@ describe("Game Tests", () => {
         betname: expect.any(String),
         status: expect.any(String)
       })
+
+      // User is identified as small or big blind
+
+      // User is identified as dealer
+
+      // User has chips removed for buy in
+
+      // User has blind bets forced - update bets array
+
+      // First player is identified and highlighted
     );
+
+    // Big blinds
   });
 
-  // Big blinds
-  //
+  // playing poker
+  // test("Game actions", async () => {
+
+  // });
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
   // test("User logs in, gets seated at a table", async () => {

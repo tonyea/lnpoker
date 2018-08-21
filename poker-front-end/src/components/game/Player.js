@@ -22,7 +22,7 @@ export default props => {
   return (
     <div className="row player-row">
       <div className="col-sm">Player Info</div>
-      <div className="col-sm">{cardRows}</div>
+      <div className="col-sm card-row row">{cardRows}</div>
     </div>
   );
 };
