@@ -128,7 +128,7 @@ describe("Game Tests", () => {
 
     expect(otherPlayer).toEqual({
       username: player1.playerName,
-      dealer: null,
+      dealer: true,
       chips: 1000,
       folded: false,
       allin: false,
@@ -162,7 +162,7 @@ describe("Game Tests", () => {
   });
 
   test("Game start", async () => {
-    expect.assertions(12);
+    expect.assertions(14);
 
     // get minplayers to decide how many cards have been popped from deck
     const dbRes = await db.query("select minplayers, deck from tables");
@@ -205,6 +205,16 @@ describe("Game Tests", () => {
         .cards[1]
     );
 
+    // First user at table is identified as dealer and everyone else should not be a dealer
+    expect(
+      activeGame.players.find(player => player.username === player1.playerName)
+        .dealer
+    ).toBe(true);
+    expect(
+      activeGame.players.find(player => player.username !== player1.playerName)
+        .dealer
+    ).toBe(false);
+
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
     const res2 = await request(app)
       .post("/api/game")
@@ -241,8 +251,6 @@ describe("Game Tests", () => {
       })
 
       // User is identified as small or big blind
-
-      // User is identified as dealer
 
       // User has chips removed for buy in
 

@@ -27,10 +27,7 @@ export default props => {
           Chips:
           {chips}
         </p>
-        <p>
-          Dealer:
-          {dealer ? "Yes" : "No"}
-        </p>
+        {dealer ? <div>Dealer</div> : null}
       </div>
       <div className="col-sm card-row row">{cardRows}</div>
     </div>

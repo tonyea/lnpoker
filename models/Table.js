@@ -183,11 +183,18 @@ const newRound = async tableID => {
       cards,
       players[i].player_id
     ]);
-    // this.players[i].cards.push(this.game.deck.pop());
-    // this.players[i].cards.push(this.game.deck.pop());
+
     // this.game.bets[i] = 0;
     // this.game.roundBets[i] = 0;
   }
+
+  // First user at table is identified as dealer and everyone else should not be a dealer
+  await db.query("UPDATE user_table SET dealer = true WHERE player_id=$1", [
+    players[0].player_id
+  ]);
+  await db.query("UPDATE user_table SET dealer = false WHERE player_id!=$1", [
+    players[0].player_id
+  ]);
 
   // persist remaining deck
   await db.query("UPDATE tables SET deck = $1 WHERE id=$2 RETURNING *", [

@@ -38,10 +38,12 @@ class Table extends Component {
       return <p> Loading </p>;
     }
 
+    // filter out my info from players to get opponents info
     const opponents = players.filter(player => player.username !== user.name);
-
+    // filter out opponents info from players to get my info
     const myInfo = players.find(player => player.username === user.name);
 
+    // listening for broadcasted messages and dispatching action when received
     this.state.socket.on("chat message", msgs => {
       receiveMessages(msgs);
     });
