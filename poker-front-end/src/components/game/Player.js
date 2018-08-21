@@ -2,7 +2,7 @@ import React from "react";
 import Card from "./Card";
 
 export default props => {
-  const { cards, chips, dealer, username } = props.myInfo;
+  const { cards, chips, dealer, username, bet } = props.myInfo;
 
   // console.log("cards", props.myInfo);
   const renderCard = (cardInfo, cardKey) => {
@@ -28,6 +28,7 @@ export default props => {
           {chips}
         </p>
         {dealer ? <div>Dealer</div> : null}
+        {bet > 0 ? <div>Bet: {bet}</div> : null}
       </div>
       <div className="col-sm card-row row">{cardRows}</div>
     </div>
