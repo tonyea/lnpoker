@@ -196,7 +196,7 @@ const joinTableIfItExists = async (cb, userID) => {
 };
 
 // @desc - join existing table
-// @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
+// @params - userID from request
 // returns errors or table data
 const exitTable = async userID => {
   await db.query("DELETE FROM user_table WHERE user_table.player_id = $1", [
@@ -276,52 +276,6 @@ const newRound = async tableID => {
     "{" + deck.join() + "}",
     tableID
   ]);
-  // // Add players in waiting list
-  // var removeIndex = 0;
-  // for (var i in this.playersToAdd) {
-  //   if (removeIndex < this.playersToRemove.length) {
-  //     var index = this.playersToRemove[removeIndex];
-  //     this.players[index] = this.playersToAdd[i];
-  //     removeIndex += 1;
-  //   } else {
-  //     this.players.push(this.playersToAdd[i]);
-  //   }
-  // }
-  // this.playersToRemove = [];
-  // this.playersToAdd = [];
-  // this.gameWinners = [];
-  // this.gameLosers = [];
-
-  // var i, smallBlind, bigBlind;
-  // //Deal 2 cards to each player
-  // for (i = 0; i < this.players.length; i += 1) {
-  //   this.players[i].cards.push(this.game.deck.pop());
-  //   this.players[i].cards.push(this.game.deck.pop());
-  //   this.game.bets[i] = 0;
-  //   this.game.roundBets[i] = 0;
-  // }
-  // //Identify Small and Big Blind player indexes
-  // smallBlind = this.dealer + 1;
-  // if (smallBlind >= this.players.length) {
-  //   smallBlind = 0;
-  // }
-  // bigBlind = this.dealer + 2;
-  // if (bigBlind >= this.players.length) {
-  //   bigBlind -= this.players.length;
-  // }
-  // //Force Blind Bets
-  // this.players[smallBlind].chips -= this.smallBlind;
-  // this.players[bigBlind].chips -= this.bigBlind;
-  // this.game.bets[smallBlind] = this.smallBlind;
-  // this.game.bets[bigBlind] = this.bigBlind;
-
-  // // get currentPlayer
-  // this.currentPlayer = this.dealer + 3;
-  // if (this.currentPlayer >= this.players.length) {
-  //   this.currentPlayer -= this.players.length;
-  // }
-
-  // this.eventEmitter.emit("newRound");
 };
 
 // @desc - trigger this after a round is complete
@@ -420,7 +374,24 @@ const fillDeck = () => {
   return deck;
 };
 
-module.exports = { joinTableIfItExists, exitTable };
+// @desc - check if it is player's turn
+// @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
+// returns errors or table data
+const checkTurn = async userID => {
+  const res = await db.query(
+    "SELECT id, currentplayer FROM user_table WHERE user_table.player_id = $1",
+    [userID]
+  );
+
+  // instead of error
+  if (res.rows.length !== 1) {
+    return false;
+  }
+  // if he is current player return true, else false
+  return res.rows[0].currentplayer;
+};
+
+module.exports = { joinTableIfItExists, exitTable, checkTurn };
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

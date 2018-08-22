@@ -12,7 +12,7 @@ describe("Game Tests", () => {
   const testpassword = "password";
 
   // setup and teardown of DB
-  beforeAll(async () => {
+  beforeEach(async () => {
     try {
       await db.query("DELETE FROM user_table");
       await db.query("DELETE FROM tables");
@@ -70,13 +70,17 @@ describe("Game Tests", () => {
     expect(res.statusCode).toBe(401);
   });
 
+  const joinGame = async player => {
+    return await request(app)
+      .post("/api/game")
+      .set("Authorization", player.token)
+      .send();
+  };
+
   test("User logs in, gets seated at a table", async () => {
     expect.assertions(5);
 
-    const res = await request(app)
-      .post("/api/game")
-      .set("Authorization", player1.token)
-      .send();
+    const res = await joinGame(player1);
 
     // check to see if response is error. User sees waiting warning if first at table
     expect(res.statusCode).toBe(400);
@@ -86,8 +90,10 @@ describe("Game Tests", () => {
     // The state of the game in the DB is 'waiting'
     // A game cannot be marked as started without the minimum number of players
     const dbRes = await db.query("SELECT status from tables");
-
     expect(dbRes.rows[0].status).toEqual("waiting");
+
+    // Second login with same player to check that user cannot sit at same table twice
+    await joinGame(player1);
 
     const dbres1 = await db.query(
       "SELECT username from user_table INNER JOIN users on users.id = user_table.player_id WHERE users.username =$1",
@@ -95,28 +101,18 @@ describe("Game Tests", () => {
     );
     expect(dbres1.rows[0].username).toEqual(player1.playerName);
 
-    // //User cannot sit at same table twice
-    await request(app)
-      .post("/api/game")
-      .set("Authorization", player1.token)
-      .send();
-
+    // User cannot sit at same table twice
     expect(dbres1.rows.length).toBe(1);
   });
 
   // I can see other player's info once I join a table. I cannot see their cards.
   test("User can see basic info about other players", async () => {
     expect.assertions(2);
-    await request(app)
-      .post("/api/game")
-      .set("Authorization", player1.token)
-      .send();
+    await joinGame(player1);
 
-    const res = await request(app)
-      .post("/api/game")
-      .set("Authorization", player2.token)
-      .send();
+    const res = await joinGame(player2);
 
+    // I can see my(p2) name
     expect(
       res.body.players.find(player => player.username === player2.playerName)
         .username
@@ -126,6 +122,7 @@ describe("Game Tests", () => {
       player => player.username === player1.playerName
     );
 
+    // I can see info about the other player except his cards
     expect(otherPlayer).toEqual({
       username: player1.playerName,
       dealer: true,
@@ -141,46 +138,73 @@ describe("Game Tests", () => {
     });
   });
 
+  const playersJoinGame = async numplayers => {
+    let res;
+    switch (numplayers) {
+      case 2:
+        res = await joinGame(player2);
+        break;
+      case 3:
+        await joinGame(player2);
+        res = await joinGame(player3);
+      case 4:
+        await joinGame(player2);
+        await joinGame(player3);
+        res = await joinGame(player4);
+      case 5:
+        await joinGame(player2);
+        await joinGame(player3);
+        await joinGame(player4);
+        res = await joinGame(player5);
+      default:
+        break;
+    }
+
+    return res;
+  };
   // A game is marked as 'started' once the minimum number of players arrive
   test("Minimum players arrive", async () => {
     expect.assertions(3);
 
-    // making another request for second player but just as good for second
-    const res = await request(app)
-      .post("/api/game")
-      .set("Authorization", player2.token)
-      .send();
+    // login minimum number of players and have them join a game
+    await joinGame(player1);
+    const dbRes0 = await db.query("select minplayers from tables");
+    const minplayers = dbRes0.rows[0].minplayers;
+    // get info of last player to arrive at table
+    const res = await playersJoinGame(minplayers);
 
+    // last player joining game should get status of 200
     expect(res.statusCode).toBe(200);
 
     // check that there are only minimum number of players at the table
-    const dbRes0 = await db.query("select minplayers from tables");
     const dbRes1 = await db.query("SELECT count(player_id) from user_table");
     expect(parseInt(parseInt(dbRes0.rows[0].minplayers))).toBe(
       parseInt(dbRes1.rows[0].count)
     );
 
+    // check that the status has changed to "started"
     const dbRes2 = await db.query("SELECT status from tables");
-
     expect(dbRes2.rows[0].status).toEqual("started");
   });
 
   test("Game start", async () => {
     // expect.assertions(14);
 
-    // get minplayers to decide how many cards have been popped from deck
+    // login minimum number of players and have them join a game
+    await joinGame(player1);
+    const dbRes0 = await db.query("select minplayers from tables");
+    const minplayers = parseInt(dbRes0.rows[0].minplayers);
+    const res = await playersJoinGame(minplayers);
+    // get deck after min players have joined
     const dbRes = await db.query("select minplayers, deck from tables");
-    const numCardsPopped = parseInt(dbRes.rows[0].minplayers) * 2;
+
+    const numCardsPopped = minplayers * 2;
     // Once a game starts, cards are shuffled and distributed, balance cards are placed in a deck
     // deck should have 52 minus number of cards held in hand
     const deck = dbRes.rows[0].deck;
     expect(deck.length).toBe(52 - numCardsPopped);
 
-    // log in as player 2 and I should see my cards in the response
-    const res = await request(app)
-      .post("/api/game")
-      .set("Authorization", player2.token)
-      .send();
+    // get game state from response to last person that joined the game
     const activeGame = res.body;
     // game API should not respond with entire deck
     expect(activeGame.deck).toBe(undefined);
@@ -240,11 +264,9 @@ describe("Game Tests", () => {
     expect(game1_player1.currentplayer).toBe(false);
 
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
-    const res2 = await request(app)
-      .post("/api/game")
-      .set("Authorization", player1.token)
-      .send();
-    const activeGame2 = res2.body;
+    const p1res = await joinGame(player1);
+
+    const activeGame2 = p1res.body;
     const game2_player1 = activeGame2.players.find(
       player => player.username === player1.playerName
     );
@@ -271,13 +293,33 @@ describe("Game Tests", () => {
         status: expect.any(String)
       })
     );
-
-    // Big blinds
   });
 
-  // playing poker
+  // // playing poker
   // test("Game actions", async () => {
+  //   // Non current user cannot check.  - p1
+  //   const dbRes = await db.query("select id from tables limit 1");
+  //   const uri = "/api/game/" + dbRes.rows[0].id + "/check";
+  //   const res = request(app)
+  //     .post(uri)
+  //     .set("Authorization", player1.token)
+  //     .send();
 
+  //   // p1 is unauthorized
+  //   console.log(res);
+  //   expect(res.statusCode).toBe(401);
+  //   expect(res.body.notallowed).toContain("Wrong user has made a move");
+  //   // first player shoudl be p2, he should be allowed to check
+  //   const validPlayerRes = await request(app)
+  //     .post(uri)
+  //     .set("Authorization", player2.token)
+  //     .send();
+
+  //   expect(validPlayerRes.statusCode).toBe(200);
+
+  //   expect(validPlayerRes.body).toContain("Success");
+
+  //   // Current user can check
   // });
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards

@@ -5,7 +5,7 @@ const db = require("../db");
 
 describe("User Auth Tests", () => {
   // setup and teardown of DB
-  beforeAll(async () => {
+  beforeEach(async () => {
     try {
       await db.query("DELETE FROM user_table");
       await db.query("DELETE FROM tables");
@@ -22,16 +22,19 @@ describe("User Auth Tests", () => {
     const testusername = "testees";
     const testpassword = "password";
 
+    const registerUser = async (username, password) => {
+      return await request(app)
+        .post("/api/users/register")
+        .send({
+          name: username,
+          password: password,
+          password2: password
+        });
+    };
     test("It should respond with valid POST method", async () => {
       expect.assertions(2);
 
-      const res = await request(app)
-        .post("/api/users/register")
-        .send({
-          name: testusername,
-          password: testpassword,
-          password2: testpassword
-        });
+      const res = await registerUser(testusername, testpassword);
 
       // check to see if response is ok
       expect(res.statusCode).toBe(200);
@@ -44,6 +47,8 @@ describe("User Auth Tests", () => {
     // check to see if profile data is persisted to DB
     test("DB should have persisted user", async () => {
       expect.assertions(2);
+
+      await registerUser(testusername, testpassword);
 
       const user = await db.query(
         "SELECT username, password from users where username=$1",
@@ -60,18 +65,11 @@ describe("User Auth Tests", () => {
     describe("Test bad registrations", () => {
       // bad usernames should return errors
       test("Bad usernames", async () => {
-        const testusername = "Test User&*%";
-        const testpassword = "password";
+        const badusername = "Test User&*%";
 
         expect.assertions(2);
 
-        const res = await request(app)
-          .post("/api/users/register")
-          .send({
-            name: testusername,
-            password: testpassword,
-            password2: testpassword
-          });
+        const res = await registerUser(badusername, testpassword);
 
         // check to see if response is bad
         expect(res.statusCode).toBe(400);
@@ -83,9 +81,6 @@ describe("User Auth Tests", () => {
 
     //  Client browser hits api/users/register with POST requets and form filled with a mismatched password and password 2. API returns error.
     test("Password 1 and 2 must match", async () => {
-      const testusername = "gooduser";
-      const testpassword = "password";
-
       expect.assertions(2);
 
       const res = await request(app)
@@ -105,27 +100,12 @@ describe("User Auth Tests", () => {
 
     //  Client browser hits api/users/register with POST requets and form filled with a preexisting username. API returns error.
     test("No duplicate usernames allowed", async () => {
-      const duplicateuser = "gooduser";
-      const testpassword = "password";
-
       expect.assertions(2);
 
       // creating duplicate users with nested promises
-      await request(app)
-        .post("/api/users/register")
-        .send({
-          name: duplicateuser,
-          password: testpassword,
-          password2: testpassword
-        });
+      await registerUser(testusername, testpassword);
 
-      const res = await request(app)
-        .post("/api/users/register")
-        .send({
-          name: duplicateuser,
-          password: testpassword,
-          password2: testpassword
-        });
+      const res = await registerUser(testusername, testpassword);
 
       // check to see if response is bad
       expect(res.statusCode).toBe(400);
@@ -141,7 +121,7 @@ describe("User Auth Tests", () => {
     const testpassword = "loginpassword";
 
     // create user before all login tests are executed
-    beforeAll(() => {
+    beforeEach(() => {
       return request(app)
         .post("/api/users/register")
         .send({
@@ -151,15 +131,20 @@ describe("User Auth Tests", () => {
         });
     });
 
+    const loginUser = async (username, password) => {
+      return request(app)
+        .post("/api/users/login")
+        .send({
+          name: username,
+          password: password
+        });
+    };
+
     test("User found", async () => {
       expect.assertions(2);
 
-      const res = await request(app)
-        .post("/api/users/login")
-        .send({
-          name: testusername,
-          password: testpassword
-        });
+      const res = await loginUser(testusername, testpassword);
+
       // check to see if response is bad
       expect(res.statusCode).toBe(200);
 
@@ -170,12 +155,8 @@ describe("User Auth Tests", () => {
     test("Password incorrect", async () => {
       expect.assertions(2);
 
-      const res = await request(app)
-        .post("/api/users/login")
-        .send({
-          name: testusername,
-          password: "wrongpass"
-        });
+      const res = await loginUser(testusername, "badpass");
+
       // check to see if response is bad
       expect(res.statusCode).toBe(400);
 
@@ -186,12 +167,8 @@ describe("User Auth Tests", () => {
     test("User not found", async () => {
       expect.assertions(2);
 
-      const res = await request(app)
-        .post("/api/users/login")
-        .send({
-          name: "wronguser",
-          password: testpassword
-        });
+      const res = await loginUser("baduser", testpassword);
+
       // check to see if response is bad
       expect(res.statusCode).toBe(404);
 
