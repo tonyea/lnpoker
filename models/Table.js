@@ -105,12 +105,12 @@ const joinTable = async (tableID, userID) => {
 const getPlayersAtTable = async (tableID, userID) => {
   const players = await db.query(
     `
-    SELECT username, dealer, chips, folded, allin, talked, bet, null as cards
+    SELECT username, dealer, chips, folded, allin, talked, bet, currentplayer, null as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
     union
-    SELECT username, dealer, chips, folded, allin, talked, bet, cards 
+    SELECT username, dealer, chips, folded, allin, talked, bet, currentplayer, cards 
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id=$2`,
@@ -210,7 +210,7 @@ const exitTable = async userID => {
 const newRound = async tableID => {
   // get all players at table
   const dbRes = await db.query(
-    "SELECT player_id, dealer from user_table where table_id = $1",
+    "SELECT player_id, dealer from user_table where table_id = $1 order by id",
     [tableID]
   );
   // all players at table
@@ -243,8 +243,14 @@ const newRound = async tableID => {
   if (bigBlindIndex >= players.length) {
     bigBlindIndex -= players.length;
   }
+  // get currentPlayer
+  let currentPlayerIndex = dealerIndex + 3;
+  if (currentPlayerIndex >= players.length) {
+    currentPlayerIndex -= players.length;
+  }
   const smallBlindPlayerID = players[smallBlindIndex].player_id;
   const bigBlindPlayerID = players[bigBlindIndex].player_id;
+  const currentPlayerID = players[currentPlayerIndex].player_id;
   // deduct small blind amount from small blind user
   await db.query(
     "UPDATE user_table SET chips = chips-(SELECT smallblind from TABLES WHERE id=$2), bet=(SELECT smallblind from TABLES WHERE id=$2) WHERE player_id=$1",
@@ -253,6 +259,16 @@ const newRound = async tableID => {
   await db.query(
     "UPDATE user_table SET chips = chips-(SELECT bigblind from TABLES WHERE id=$2), bet=(SELECT bigblind from TABLES WHERE id=$2) WHERE player_id=$1",
     [bigBlindPlayerID, tableID]
+  );
+
+  // // set current player
+  await db.query(
+    "UPDATE user_table SET currentplayer = true WHERE player_id=$1 AND table_id=$2",
+    [currentPlayerID, tableID]
+  );
+  await db.query(
+    "UPDATE user_table SET currentplayer = false WHERE player_id!=$1 AND table_id=$2",
+    [currentPlayerID, tableID]
   );
 
   // persist remaining deck

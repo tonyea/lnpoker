@@ -136,7 +136,8 @@ describe("Game Tests", () => {
       talked: false,
       cards: null,
       isBigBlind: true,
-      isSmallBlind: false
+      isSmallBlind: false,
+      currentplayer: false
     });
   });
 
@@ -234,6 +235,10 @@ describe("Game Tests", () => {
     expect(game1_player1.bet).toBe(activeGame.bigblind);
     expect(game1_player2.bet).toBe(activeGame.smallblind);
 
+    // First player is identified and highlighted   // get currentPlayer - dealer +3, else last player -> p2
+    expect(game1_player2.currentplayer).toBe(true);
+    expect(game1_player1.currentplayer).toBe(false);
+
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
     const res2 = await request(app)
       .post("/api/game")
@@ -265,8 +270,6 @@ describe("Game Tests", () => {
         betname: expect.any(String),
         status: expect.any(String)
       })
-
-      // First player is identified and highlighted
     );
 
     // Big blinds
