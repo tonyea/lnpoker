@@ -105,12 +105,12 @@ const joinTable = async (tableID, userID) => {
 const getPlayersAtTable = async (tableID, userID) => {
   const players = await db.query(
     `
-    SELECT username, dealer, chips, folded, allin, talked, bet, currentplayer, null as cards
+    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, null as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
     union
-    SELECT username, dealer, chips, folded, allin, talked, bet, currentplayer, cards 
+    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, cards 
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id=$2`,
@@ -187,6 +187,8 @@ const joinTableIfItExists = async (cb, userID) => {
     // set player object to requesting user's id if above are false
     // add the user to the table
     await joinTable(table.id, userID);
+    // instead of querying the db again, change the status here
+    table.status = "started";
 
     table.players = await getPlayersAtTable(table.id, userID);
   } catch (error) {

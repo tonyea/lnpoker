@@ -4,11 +4,13 @@ const request = require("supertest");
 const db = require("../db");
 
 describe("Game Tests", () => {
-  const player1 = { playerName: "playerone", token: "" };
-  const player2 = { playerName: "playertwo", token: "" };
-  const player3 = { playerName: "playerthree", token: "" };
-  const player4 = { playerName: "playerfour", token: "" };
-  const player5 = { playerName: "playerfive", token: "" };
+  const players = [
+    { playerName: "playerone", token: "" },
+    { playerName: "playertwo", token: "" },
+    { playerName: "playerthree", token: "" },
+    { playerName: "playerfour", token: "" },
+    { playerName: "playerfive", token: "" }
+  ];
   const testpassword = "password";
 
   // setup and teardown of DB
@@ -21,20 +23,16 @@ describe("Game Tests", () => {
       console.log(e);
     }
 
-    await registerUser(player1);
-    await loginUser(player1);
-
-    await registerUser(player2);
-    await loginUser(player2);
-
-    await registerUser(player3);
-    await loginUser(player3);
-
-    await registerUser(player4);
-    await loginUser(player4);
-
-    await registerUser(player5);
-    await loginUser(player5);
+    await registerUser(players[0]);
+    await loginUser(players[0]);
+    await registerUser(players[1]);
+    await loginUser(players[1]);
+    await registerUser(players[2]);
+    await loginUser(players[2]);
+    await registerUser(players[3]);
+    await loginUser(players[3]);
+    await registerUser(players[4]);
+    await loginUser(players[4]);
   });
 
   const registerUser = async player => {
@@ -80,7 +78,7 @@ describe("Game Tests", () => {
   test("User logs in, gets seated at a table", async () => {
     expect.assertions(5);
 
-    const res = await joinGame(player1);
+    const res = await joinGame(players[0]);
 
     // check to see if response is error. User sees waiting warning if first at table
     expect(res.statusCode).toBe(400);
@@ -93,13 +91,13 @@ describe("Game Tests", () => {
     expect(dbRes.rows[0].status).toEqual("waiting");
 
     // Second login with same player to check that user cannot sit at same table twice
-    await joinGame(player1);
+    await joinGame(players[0]);
 
     const dbres1 = await db.query(
       "SELECT username from user_table INNER JOIN users on users.id = user_table.player_id WHERE users.username =$1",
-      [player1.playerName]
+      [players[0].playerName]
     );
-    expect(dbres1.rows[0].username).toEqual(player1.playerName);
+    expect(dbres1.rows[0].username).toEqual(players[0].playerName);
 
     // User cannot sit at same table twice
     expect(dbres1.rows.length).toBe(1);
@@ -108,33 +106,32 @@ describe("Game Tests", () => {
   // I can see other player's info once I join a table. I cannot see their cards.
   test("User can see basic info about other players", async () => {
     expect.assertions(2);
-    await joinGame(player1);
+    await joinGame(players[0]);
 
-    const res = await joinGame(player2);
+    const res = await joinGame(players[1]);
 
     // I can see my(p2) name
     expect(
-      res.body.players.find(player => player.username === player2.playerName)
+      res.body.players.find(player => player.username === players[1].playerName)
         .username
-    ).toEqual(player2.playerName);
+    ).toEqual(players[1].playerName);
 
     const otherPlayer = res.body.players.find(
-      player => player.username === player1.playerName
+      player => player.username === players[0].playerName
     );
 
     // I can see info about the other player except his cards
     expect(otherPlayer).toEqual({
-      username: player1.playerName,
+      username: players[0].playerName,
       dealer: true,
       chips: 98000,
       bet: 2000,
-      folded: false,
-      allin: false,
       talked: false,
       cards: null,
       isBigBlind: true,
       isSmallBlind: false,
-      currentplayer: false
+      currentplayer: false,
+      lastaction: null
     });
   });
 
@@ -142,20 +139,20 @@ describe("Game Tests", () => {
     let res;
     switch (numplayers) {
       case 2:
-        res = await joinGame(player2);
+        res = await joinGame(players[1]);
         break;
       case 3:
-        await joinGame(player2);
-        res = await joinGame(player3);
+        await joinGame(players[1]);
+        res = await joinGame(players[2]);
       case 4:
-        await joinGame(player2);
-        await joinGame(player3);
-        res = await joinGame(player4);
+        await joinGame(players[1]);
+        await joinGame(players[2]);
+        res = await joinGame(players[3]);
       case 5:
-        await joinGame(player2);
-        await joinGame(player3);
-        await joinGame(player4);
-        res = await joinGame(player5);
+        await joinGame(players[1]);
+        await joinGame(players[2]);
+        await joinGame(players[3]);
+        res = await joinGame(players[4]);
       default:
         break;
     }
@@ -164,10 +161,10 @@ describe("Game Tests", () => {
   };
   // A game is marked as 'started' once the minimum number of players arrive
   test("Minimum players arrive", async () => {
-    expect.assertions(3);
+    expect.assertions(4);
 
     // login minimum number of players and have them join a game
-    await joinGame(player1);
+    await joinGame(players[0]);
     const dbRes0 = await db.query("select minplayers from tables");
     const minplayers = dbRes0.rows[0].minplayers;
     // get info of last player to arrive at table
@@ -185,13 +182,14 @@ describe("Game Tests", () => {
     // check that the status has changed to "started"
     const dbRes2 = await db.query("SELECT status from tables");
     expect(dbRes2.rows[0].status).toEqual("started");
+    expect(res.body.status).toEqual("started");
   });
 
   test("Game start", async () => {
     // expect.assertions(14);
 
     // login minimum number of players and have them join a game
-    await joinGame(player1);
+    await joinGame(players[0]);
     const dbRes0 = await db.query("select minplayers from tables");
     const minplayers = parseInt(dbRes0.rows[0].minplayers);
     const res = await playersJoinGame(minplayers);
@@ -221,10 +219,10 @@ describe("Game Tests", () => {
     expect(dbHands.length).toBe(numCardsPopped);
 
     const game1_player1 = activeGame.players.find(
-      player => player.username === player1.playerName
+      player => player.username === players[0].playerName
     );
     const game1_player2 = activeGame.players.find(
-      player => player.username === player2.playerName
+      player => player.username === players[1].playerName
     );
     // check that player1's cards are not visible in response but player2's cards are since we are logged in as player2
     expect(game1_player1.cards).toBe(null);
@@ -245,11 +243,11 @@ describe("Game Tests", () => {
     const buyinRes = await db.query("SELECT minbuyin from tables limit 1");
     const p1bankRes = await db.query(
       "SELECT bank from users where username = $1",
-      [player1.playerName]
+      [players[0].playerName]
     );
     const p2bankRes = await db.query(
       "SELECT bank from users where username = $1",
-      [player2.playerName]
+      [players[1].playerName]
     );
     expect(p1bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
     expect(p2bankRes.rows[0].bank).toBe(100000 - buyinRes.rows[0].minbuyin);
@@ -264,14 +262,14 @@ describe("Game Tests", () => {
     expect(game1_player1.currentplayer).toBe(false);
 
     // check that player2's cards are not visible in response but player1's cards once we are logged in as player1
-    const p1res = await joinGame(player1);
+    const p1res = await joinGame(players[0]);
 
     const activeGame2 = p1res.body;
     const game2_player1 = activeGame2.players.find(
-      player => player.username === player1.playerName
+      player => player.username === players[0].playerName
     );
     const game2_player2 = activeGame2.players.find(
-      player => player.username === player2.playerName
+      player => player.username === players[1].playerName
     );
     expect(game2_player2.cards).toBe(null);
     expect(dbHands).toContain(game2_player1.cards[0]);
@@ -296,31 +294,104 @@ describe("Game Tests", () => {
   });
 
   // // playing poker
-  // test("Game actions", async () => {
-  //   // Non current user cannot check.  - p1
-  //   const dbRes = await db.query("select id from tables limit 1");
-  //   const uri = "/api/game/" + dbRes.rows[0].id + "/check";
-  //   const res = request(app)
-  //     .post(uri)
-  //     .set("Authorization", player1.token)
-  //     .send();
+  test("Game actions", async () => {
+    // login minimum number of players and have them join a game
+    await joinGame(players[0]);
+    const dbRes0 = await db.query("select minplayers from tables");
+    const minplayers = parseInt(dbRes0.rows[0].minplayers);
+    const res = await playersJoinGame(minplayers);
 
-  //   // p1 is unauthorized
-  //   console.log(res);
-  //   expect(res.statusCode).toBe(401);
-  //   expect(res.body.notallowed).toContain("Wrong user has made a move");
-  //   // first player shoudl be p2, he should be allowed to check
-  //   const validPlayerRes = await request(app)
-  //     .post(uri)
-  //     .set("Authorization", player2.token)
-  //     .send();
+    // get current and non-current players
+    let currentPlayer = {};
+    let notCurrentPlayer = {};
+    await db
+      .query(
+        `select username, currentplayer
+      from user_table
+      inner join users on users.id = user_table.player_id where currentplayer=true`
+      )
+      .then(async res1 => {
+        // get current player - p2 in 2p game
+        currentPlayer = players.find(player => {
+          return player.playerName === res1.rows[0].username;
+        });
 
-  //   expect(validPlayerRes.statusCode).toBe(200);
+        // get player who is not current - p1 in 2p game
+        notCurrentPlayer = players.find(player => {
+          return player.playerName !== res1.rows[0].username;
+        });
+      });
 
-  //   expect(validPlayerRes.body).toContain("Success");
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
-  //   // Current user can check
-  // });
+    // Non current user cannot check.  - p1 in 2p game
+    const dbRes = await db.query("select id from tables limit 1");
+    const tableID = dbRes.rows[0].id;
+    const uri = "/api/game/" + tableID + "/check";
+    const resCheckNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resCheckNotCurrent.statusCode).toBe(401);
+    expect(resCheckNotCurrent.body.notallowed).toContain(
+      "Wrong user has made a move"
+    );
+
+    // if any of the other players have made bets then you can't check
+    db.query(
+      `UPDATE user_table SET bet = bet + 10000 
+    where player_id != (select id from users where username = $2)
+    and table_id = $1`,
+      [tableID, currentPlayer.playerName]
+    );
+
+    // current player should be allowed to check except if there are existing bets
+    let resCheckCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    expect(resCheckCurrent.statusCode).toBe(400);
+    expect(resCheckCurrent.body.notallowed).toContain(
+      "Check not allowed, replay please"
+    );
+
+    db.query(
+      `UPDATE user_table SET bet = 0 
+    where player_id != (select id from users where username = $2)
+    and table_id = $1`,
+      [tableID, currentPlayer.playerName]
+    );
+
+    resCheckCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    // Current user can check if other bets are 0
+    expect(resCheckCurrent.statusCode).toBe(200);
+    expect(resCheckCurrent.body).toContain("Success");
+
+    // if I'm allowed to check then add 0 to my bet field
+    // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(0);
+        expect(dbRes1.rows[0].talked).toBe(true);
+      });
+
+    // 'select player_id, bet from user_table where bet > (select bet from user_table where player_id = 5618)'
+
+    // table progresses
+  });
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
   // test("User logs in, gets seated at a table", async () => {

@@ -41,16 +41,18 @@ router.post(
     const errors = {};
 
     // check if it is player's turn
-    const myTurn = checkTurn(req.user.id);
-    console.log(myTurn);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      return res.status(401).json(errors);
-    } else if (myTurn) {
-      // check that the person requesting the check is allowed to check
-      console.log(req.params.tableid);
-    }
+    checkTurn(req.user.id).then(myTurn => {
+      // console.log(myTurn);
+      if (!myTurn) {
+        // return error if not
+        errors.notallowed = "Wrong user has made a move";
+        return res.status(401).json(errors);
+      } else if (myTurn) {
+        // check that the person requesting the check is allowed to check
+
+        return res.json("Success");
+      }
+    });
   }
 );
 
