@@ -336,13 +336,13 @@ describe("Game Tests", () => {
       .send();
 
     // notCurrentPlayer is unauthorized
-    expect(resCheckNotCurrent.statusCode).toBe(401);
-    expect(resCheckNotCurrent.body.notallowed).toContain(
-      "Wrong user has made a move"
-    );
+    expect(resCheckNotCurrent.statusCode).toBe(400);
+    expect(resCheckNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
 
     // if any of the other players have made bets then you can't check
-    db.query(
+    await db.query(
       `UPDATE user_table SET bet = bet + 10000 
     where player_id != (select id from users where username = $2)
     and table_id = $1`,
@@ -356,11 +356,11 @@ describe("Game Tests", () => {
       .send();
 
     expect(resCheckCurrent.statusCode).toBe(400);
-    expect(resCheckCurrent.body.notallowed).toContain(
-      "Check not allowed, replay please"
-    );
+    expect(resCheckCurrent.body).toEqual({
+      notallowed: "Check not allowed, replay please"
+    });
 
-    db.query(
+    await db.query(
       `UPDATE user_table SET bet = 0 
     where player_id != (select id from users where username = $2)
     and table_id = $1`,
@@ -380,12 +380,13 @@ describe("Game Tests", () => {
     // set talked to true
     await db
       .query(
-        `SELECT bet, talked FROM user_table where player_id = (select id from users where username = $1)`,
+        `SELECT bet, talked, lastaction FROM user_table where player_id = (select id from users where username = $1)`,
         [currentPlayer.playerName]
       )
       .then(dbRes1 => {
-        expect(parseInt(dbRes1.rows[0].bet)).toBe(0);
+        expect(parseInt(dbRes1.rows[0].bet)).not.toBe(0);
         expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("check");
       });
 
     // 'select player_id, bet from user_table where bet > (select bet from user_table where player_id = 5618)'

@@ -376,9 +376,54 @@ const fillDeck = () => {
   return deck;
 };
 
+// @desc - player action check
+// @params - user id of player doing game action - check, cb that takes error or table json
+// returns callback
+const check = async (userID, cb) => {
+  const errors = {};
+  try {
+    // check if it is my turn
+    const myTurn = await checkTurn(userID);
+    if (!myTurn) {
+      // return error if not
+      errors.notallowed = "Wrong user has made a move";
+      return cb(errors, null);
+    }
+
+    // check that the person requesting the check is allowed to check
+    // if any of the other players have made bets larger than you then you can't check
+    const otherBetsRes = await db.query(
+      `SELECT player_id, bet 
+        FROM user_table 
+        WHERE bet > (SELECT bet from user_table WHERE player_id = $1) AND table_id = (SELECT table_id from user_table WHERE player_id = $1)`,
+      [userID]
+    );
+    if (otherBetsRes.rows.length > 0) {
+      errors.notallowed = "Check not allowed, replay please";
+      return cb(errors, null);
+    }
+
+    const res = await db.query(
+      "UPDATE user_table SET talked=true, lastaction='check' where player_id = $1 returning * ",
+      [userID]
+    );
+    if (res.rows.length > 0) {
+      return cb(null, "Success");
+    }
+    errors.notupdated = "Did not update action and talked state";
+    return cb(errors, null);
+
+    //Attemp to progress the game
+    // progress(this.table);
+  } catch (e) {
+    errors.notallowed = "Check not allowed, replay please";
+    return cb(errors, null);
+  }
+};
+
 // @desc - check if it is player's turn
-// @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
-// returns errors or table data
+// @params - userID of player being checked
+// returns bool
 const checkTurn = async userID => {
   const res = await db.query(
     "SELECT id, currentplayer FROM user_table WHERE user_table.player_id = $1",
@@ -393,7 +438,7 @@ const checkTurn = async userID => {
   return res.rows[0].currentplayer;
 };
 
-module.exports = { joinTableIfItExists, exitTable, checkTurn };
+module.exports = { joinTableIfItExists, exitTable, check };
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

@@ -1,11 +1,7 @@
 const passport = require("passport");
 const Router = require("express-promise-router");
 const router = new Router();
-const {
-  joinTableIfItExists,
-  checkTurn,
-  exitTable
-} = require("../../models/Table");
+const { joinTableIfItExists, check, exitTable } = require("../../models/Table");
 
 // @route   POST api/game
 // @desc    Create a new table if user hasn't already created / joined another table and persist to DB
@@ -38,21 +34,18 @@ router.post(
   "/:tableid/check",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    const errors = {};
-
-    // check if it is player's turn
-    checkTurn(req.user.id).then(myTurn => {
-      // console.log(myTurn);
-      if (!myTurn) {
-        // return error if not
-        errors.notallowed = "Wrong user has made a move";
-        return res.status(401).json(errors);
-      } else if (myTurn) {
-        // check that the person requesting the check is allowed to check
-
-        return res.json("Success");
+    // callback function that returns error or table object
+    const returnResult = (errors, resultFromCaller = {}) => {
+      if (errors) {
+        // console.log("errors", errors);
+        res.status(400);
+        return res.json(errors);
       }
-    });
+      // console.log("resultFromCaller", resultFromCaller);
+      return res.json(resultFromCaller);
+    };
+    // check if it is player's turn
+    check(req.user.id, returnResult);
   }
 );
 
