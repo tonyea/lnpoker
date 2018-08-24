@@ -338,7 +338,7 @@ describe("Game Tests", () => {
 
     // Non current user cannot check.  - p1 in 2p game
     const tableID = await getTableID();
-    const uri = "/api/game/" + tableID + "/check";
+    const uri = "/api/game/check";
     const resCheckNotCurrent = await request(app)
       .post(uri)
       .set("Authorization", notCurrentPlayer.token)
@@ -399,7 +399,6 @@ describe("Game Tests", () => {
       });
   });
 
-  // table progresses from one round to next
   test("Game action - Fold", async () => {
     // login minimum number of players and have them join a game
     await playersJoinGame();
@@ -412,8 +411,7 @@ describe("Game Tests", () => {
     expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
     // Non current user cannot fold.  - p1 in 2p game
-    const tableID = await getTableID();
-    const uri = "/api/game/" + tableID + "/fold";
+    const uri = "/api/game/fold";
     const resFoldNotCurrent = await request(app)
       .post(uri)
       .set("Authorization", notCurrentPlayer.token)
@@ -462,24 +460,141 @@ describe("Game Tests", () => {
       expect(parseInt(dbRes2.rows[0].pot)).toBe(betAmount);
     });
   });
+
+  test("Game action - Bet", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
+
+    // Non current user cannot bet.  - p1 in 2p game
+    const uri = "/api/game/bet/10";
+    const resBetNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resBetNotCurrent.statusCode).toBe(400);
+    expect(resBetNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
+
+    // get bet amount prior to betting
+    let betLessThanChips = 0;
+    let priorBetAmount = 0;
+    await db
+      .query(
+        `SELECT chips, bet FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes => {
+        betLessThanChips = parseInt(dbRes.rows[0].chips) - 10;
+        priorBetAmount = parseInt(dbRes.rows[0].bet);
+      });
+
+    const uriLessThanChips = "/api/game/bet/" + betLessThanChips;
+
+    // current player should be allowed to bet if he does have sufficient chips
+    let resBetLessThanChipsCurrentUser = await request(app)
+      .post(uriLessThanChips)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    expect(resBetLessThanChipsCurrentUser.statusCode).toBe(200);
+    expect(resBetLessThanChipsCurrentUser.body).toContain("Success");
+
+    // // if I'm allowed to bet then set my bet field to bet amount
+    // // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked, lastaction, chips FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(
+          betLessThanChips + priorBetAmount
+        );
+        expect(parseInt(dbRes1.rows[0].chips)).toBe(10);
+        expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("bet");
+      });
+  });
+
+  test("Game action - Bet All In", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
+
+    // Non current user cannot bet.  - p1 in 2p game
+    const uri = "/api/game/bet/10";
+    const resBetNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resBetNotCurrent.statusCode).toBe(400);
+    expect(resBetNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
+
+    // get bet amount prior to betting
+    let betMoreThanChips = 0;
+    let priorBetAmount = 0;
+    let totalChips = 0;
+    await db
+      .query(
+        `SELECT chips, bet FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes => {
+        totalChips = parseInt(dbRes.rows[0].chips);
+        betMoreThanChips = totalChips + 10;
+        priorBetAmount = parseInt(dbRes.rows[0].bet);
+      });
+
+    const uriMoreThanChips = "/api/game/bet/" + betMoreThanChips;
+    // try betting more than the number of chips the user has
+    const resBetMoreThanChipsCurrentUser = await request(app)
+      .post(uriMoreThanChips)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    // see if I have sufficient number of chips. run all in code if I don't
+    // console.log('You don\'t have enought chips --> ALL IN !!!');
+    // this.AllIn();
+    expect(resBetMoreThanChipsCurrentUser.statusCode).toBe(200);
+    expect(resBetMoreThanChipsCurrentUser.body).toContain("All In");
+
+    // // if I'm allowed to bet then set my bet field to bet amount
+    // // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked, lastaction, chips FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(totalChips + priorBetAmount);
+        expect(parseInt(dbRes1.rows[0].chips)).toBe(0);
+        expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("all in");
+      });
+  });
+
   // // table progresses from one round to next
   // test("Game action - Call", async () => {
-  //   // login minimum number of players and have them join a game
-  //   await joinGame(players[0]);
-  //   const dbRes0 = await db.query("select minplayers from tables");
-  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
-  //   await playersJoinGame(minplayers);
-  // });
-  // // table progresses from one round to next
-  // test("Game action - Bet", async () => {
-  //   // login minimum number of players and have them join a game
-  //   await joinGame(players[0]);
-  //   const dbRes0 = await db.query("select minplayers from tables");
-  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
-  //   await playersJoinGame(minplayers);
-  // });
-  // // table progresses from one round to next
-  // test("Game action - All in", async () => {
   //   // login minimum number of players and have them join a game
   //   await joinGame(players[0]);
   //   const dbRes0 = await db.query("select minplayers from tables");

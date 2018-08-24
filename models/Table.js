@@ -461,6 +461,88 @@ const fold = async (userID, cb) => {
   }
 };
 
+// @desc - player action bet
+// @params - user id of player doing game action - bet, cb that takes error or table json
+// returns callback
+const bet = async (userID, betAmount, cb) => {
+  const errors = {};
+  try {
+    // check if it is my turn
+    const myTurn = await checkTurn(userID);
+    if (!myTurn) {
+      // return error if not
+      errors.notallowed = "Wrong user has made a move";
+      return cb(errors, null);
+    }
+
+    // see if I have sufficient number of chips. show error if I don't
+    const res = await db.query(
+      "SELECT chips FROM user_table WHERE player_id = $1",
+      [userID]
+    );
+
+    if (res.rows[0].chips < betAmount) {
+      return allin(userID, cb);
+    }
+
+    // add chips to my bet, remove from chips, set talked = true
+    await db.query(
+      "UPDATE user_table SET talked=true, lastaction='bet', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+      [userID, betAmount]
+    );
+
+    return cb(null, "Success");
+    //Attemp to progress the game
+    // progress(this.table);
+  } catch (e) {
+    errors.notallowed = "Bet not allowed, replay please";
+    return cb(errors, null);
+  }
+};
+
+const allin = async (userID, cb) => {
+  const errors = {};
+  try {
+    // check if it is my turn
+    const myTurn = await checkTurn(userID);
+    if (!myTurn) {
+      // return error if not
+      errors.notallowed = "Wrong user has made a move";
+      return cb(errors, null);
+    }
+
+    // see if I have sufficient number of chips. show error if I don't
+    const res = await db.query(
+      "SELECT chips FROM user_table WHERE player_id = $1",
+      [userID]
+    );
+    const totalChips = res.rows[0].chips;
+
+    if (res.rows[0].chips < 1) {
+      errors.notallowed = "Can't bet more than number of chips owned.";
+      return cb(errors, null);
+    }
+
+    // add chips to my bet, remove from chips, set talked = true
+    await db.query(
+      "UPDATE user_table SET talked=true, lastaction='all in', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+      [userID, totalChips]
+    );
+
+    return cb(null, "All In");
+    //Attemp to progress the game
+    // progress(this.table);
+  } catch (e) {
+    errors.notallowed = "Bet not allowed, replay please";
+    return cb(errors, null);
+  }
+};
+
+//   //Attemp to progress the game
+//   this.turnBet = {action: "allin", playerName: this.playerName, amount: allInValue}
+//   progress(this.table);
+// };
+
 // @desc - check if it is player's turn
 // @params - userID of player being checked
 // returns bool
@@ -478,7 +560,7 @@ const checkTurn = async userID => {
   return res.rows[0].currentplayer;
 };
 
-module.exports = { joinTableIfItExists, exitTable, check, fold };
+module.exports = { joinTableIfItExists, exitTable, check, fold, bet };
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

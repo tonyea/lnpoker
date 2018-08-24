@@ -5,6 +5,7 @@ const {
   joinTableIfItExists,
   check,
   fold,
+  bet,
   exitTable
 } = require("../../models/Table");
 
@@ -36,7 +37,7 @@ router.post(
 // @desc    User action check
 // @access  Private
 router.post(
-  "/:tableid/check",
+  "/check",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // callback function that returns error or table object
@@ -54,11 +55,11 @@ router.post(
   }
 );
 
-// @route   POST api/game/:tableid/check
-// @desc    User action check
+// @route   POST api/game/fold
+// @desc    User action fold
 // @access  Private
 router.post(
-  "/:tableid/fold",
+  "/fold",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // callback function that returns error or table object
@@ -71,8 +72,30 @@ router.post(
       // console.log("resultFromCaller", resultFromCaller);
       return res.json(resultFromCaller);
     };
-    // check if it is player's turn
+    // fold if it is player's turn
     fold(req.user.id, returnResult);
+  }
+);
+
+// @route   POST api/game/bet-:amount
+// @desc    User action bet
+// @access  Private
+router.post(
+  "/bet/:amount",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    // callback function that returns error or table object
+    const returnResult = (errors, resultFromCaller = {}) => {
+      if (errors) {
+        // console.log("errors", errors);
+        res.status(400);
+        return res.json(errors);
+      }
+      // console.log("resultFromCaller", resultFromCaller);
+      return res.json(resultFromCaller);
+    };
+    // bet if it is player's turn
+    bet(req.user.id, req.params.amount, returnResult);
   }
 );
 
