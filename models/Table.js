@@ -419,6 +419,46 @@ const check = async (userID, cb) => {
     errors.notallowed = "Check not allowed, replay please";
     return cb(errors, null);
   }
+
+  // progress the table
+};
+
+// @desc - player action fold
+// @params - user id of player doing game action - fold, cb that takes error or table json
+// returns callback
+const fold = async (userID, cb) => {
+  const errors = {};
+  try {
+    // check if it is my turn
+    const myTurn = await checkTurn(userID);
+    if (!myTurn) {
+      // return error if not
+      errors.notallowed = "Wrong user has made a move";
+      return cb(errors, null);
+    }
+
+    // add my bet to the pot
+    await db.query(
+      "UPDATE tables SET pot=(SELECT bet from user_table WHERE player_id=$1) WHERE id = (SELECT table_id from user_table WHERE player_id = $1) returning * ",
+      [userID]
+    );
+    //set my bet field to 0, set talked to true and last action to fold
+    const res = await db.query(
+      "UPDATE user_table SET talked=true, lastaction='fold', bet=0 where player_id = $1 returning * ",
+      [userID]
+    );
+    if (res.rows.length > 0) {
+      return cb(null, "Success");
+    }
+    errors.notupdated = "Did not update action and talked state";
+    return cb(errors, null);
+
+    //Attemp to progress the game
+    // progress(this.table);
+  } catch (e) {
+    errors.notallowed = "Check not allowed, replay please";
+    return cb(errors, null);
+  }
 };
 
 // @desc - check if it is player's turn
@@ -438,7 +478,7 @@ const checkTurn = async userID => {
   return res.rows[0].currentplayer;
 };
 
-module.exports = { joinTableIfItExists, exitTable, check };
+module.exports = { joinTableIfItExists, exitTable, check, fold };
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

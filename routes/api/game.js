@@ -1,7 +1,12 @@
 const passport = require("passport");
 const Router = require("express-promise-router");
 const router = new Router();
-const { joinTableIfItExists, check, exitTable } = require("../../models/Table");
+const {
+  joinTableIfItExists,
+  check,
+  fold,
+  exitTable
+} = require("../../models/Table");
 
 // @route   POST api/game
 // @desc    Create a new table if user hasn't already created / joined another table and persist to DB
@@ -46,6 +51,28 @@ router.post(
     };
     // check if it is player's turn
     check(req.user.id, returnResult);
+  }
+);
+
+// @route   POST api/game/:tableid/check
+// @desc    User action check
+// @access  Private
+router.post(
+  "/:tableid/fold",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    // callback function that returns error or table object
+    const returnResult = (errors, resultFromCaller = {}) => {
+      if (errors) {
+        // console.log("errors", errors);
+        res.status(400);
+        return res.json(errors);
+      }
+      // console.log("resultFromCaller", resultFromCaller);
+      return res.json(resultFromCaller);
+    };
+    // check if it is player's turn
+    fold(req.user.id, returnResult);
   }
 );
 

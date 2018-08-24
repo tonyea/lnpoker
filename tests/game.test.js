@@ -12,6 +12,9 @@ describe("Game Tests", () => {
     { playerName: "playerfive", token: "" }
   ];
   const testpassword = "password";
+  // global variables for current player
+  let currentPlayer = {};
+  let notCurrentPlayer = {};
 
   // setup and teardown of DB
   beforeEach(async () => {
@@ -33,6 +36,9 @@ describe("Game Tests", () => {
     await loginUser(players[3]);
     await registerUser(players[4]);
     await loginUser(players[4]);
+
+    currentPlayer = {};
+    notCurrentPlayer = {};
   });
 
   const registerUser = async player => {
@@ -135,7 +141,12 @@ describe("Game Tests", () => {
     });
   });
 
-  const playersJoinGame = async numplayers => {
+  const playersJoinGame = async () => {
+    // first player has to create the table and others can join
+    await joinGame(players[0]);
+    const dbRes0 = await db.query("select minplayers from tables");
+    const numplayers = parseInt(dbRes0.rows[0].minplayers);
+
     let res;
     switch (numplayers) {
       case 2:
@@ -163,21 +174,17 @@ describe("Game Tests", () => {
   test("Minimum players arrive", async () => {
     expect.assertions(4);
 
-    // login minimum number of players and have them join a game
-    await joinGame(players[0]);
-    const dbRes0 = await db.query("select minplayers from tables");
-    const minplayers = dbRes0.rows[0].minplayers;
     // get info of last player to arrive at table
-    const res = await playersJoinGame(minplayers);
+    const res = await playersJoinGame();
+    const dbRes0 = await db.query("select minplayers from tables");
+    const minplayers = parseInt(dbRes0.rows[0].minplayers);
 
     // last player joining game should get status of 200
     expect(res.statusCode).toBe(200);
 
     // check that there are only minimum number of players at the table
     const dbRes1 = await db.query("SELECT count(player_id) from user_table");
-    expect(parseInt(parseInt(dbRes0.rows[0].minplayers))).toBe(
-      parseInt(dbRes1.rows[0].count)
-    );
+    expect(parseInt(parseInt(minplayers))).toBe(parseInt(dbRes1.rows[0].count));
 
     // check that the status has changed to "started"
     const dbRes2 = await db.query("SELECT status from tables");
@@ -189,12 +196,11 @@ describe("Game Tests", () => {
     // expect.assertions(14);
 
     // login minimum number of players and have them join a game
-    await joinGame(players[0]);
-    const dbRes0 = await db.query("select minplayers from tables");
-    const minplayers = parseInt(dbRes0.rows[0].minplayers);
-    const res = await playersJoinGame(minplayers);
+    const res = await playersJoinGame();
+
     // get deck after min players have joined
     const dbRes = await db.query("select minplayers, deck from tables");
+    const minplayers = parseInt(dbRes.rows[0].minplayers);
 
     const numCardsPopped = minplayers * 2;
     // Once a game starts, cards are shuffled and distributed, balance cards are placed in a deck
@@ -293,17 +299,7 @@ describe("Game Tests", () => {
     );
   });
 
-  // // playing poker
-  test("Game actions", async () => {
-    // login minimum number of players and have them join a game
-    await joinGame(players[0]);
-    const dbRes0 = await db.query("select minplayers from tables");
-    const minplayers = parseInt(dbRes0.rows[0].minplayers);
-    const res = await playersJoinGame(minplayers);
-
-    // get current and non-current players
-    let currentPlayer = {};
-    let notCurrentPlayer = {};
+  const setCurrentPlayer = async () => {
     await db
       .query(
         `select username, currentplayer
@@ -321,14 +317,27 @@ describe("Game Tests", () => {
           return player.playerName !== res1.rows[0].username;
         });
       });
+  };
+
+  const getTableID = async () => {
+    return await db
+      .query("select id from tables limit 1")
+      .then(res => res.rows[0].id);
+  };
+  // // playing poker
+  test("Game action - Check", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
 
     // expecting currentplayer to be player2, notcurrentplayer to be p1
     expect(currentPlayer.playerName).toBe(players[1].playerName);
     expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
     // Non current user cannot check.  - p1 in 2p game
-    const dbRes = await db.query("select id from tables limit 1");
-    const tableID = dbRes.rows[0].id;
+    const tableID = await getTableID();
     const uri = "/api/game/" + tableID + "/check";
     const resCheckNotCurrent = await request(app)
       .post(uri)
@@ -388,11 +397,148 @@ describe("Game Tests", () => {
         expect(dbRes1.rows[0].talked).toBe(true);
         expect(dbRes1.rows[0].lastaction).toBe("check");
       });
-
-    // 'select player_id, bet from user_table where bet > (select bet from user_table where player_id = 5618)'
-
-    // table progresses
   });
+
+  // table progresses from one round to next
+  test("Game action - Fold", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
+
+    // Non current user cannot fold.  - p1 in 2p game
+    const tableID = await getTableID();
+    const uri = "/api/game/" + tableID + "/fold";
+    const resFoldNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resFoldNotCurrent.statusCode).toBe(400);
+    expect(resFoldNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
+
+    // get bet amount prior to folding
+    let betAmount = 0;
+    await db
+      .query(
+        `SELECT bet FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes => {
+        betAmount = dbRes.rows[0].bet;
+      });
+    // // current player should be allowed to fold
+    let resFoldCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    expect(resFoldCurrent.statusCode).toBe(200);
+    expect(resFoldCurrent.body).toContain("Success");
+
+    // // if I'm allowed to fold then set my bet field to 0
+    // // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked, lastaction FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(0);
+        expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("fold");
+      });
+
+    //add my bet to the pot
+    await db.query("SELECT pot FROM tables limit 1").then(dbRes2 => {
+      expect(parseInt(dbRes2.rows[0].pot)).toBe(betAmount);
+    });
+  });
+  // // table progresses from one round to next
+  // test("Game action - Call", async () => {
+  //   // login minimum number of players and have them join a game
+  //   await joinGame(players[0]);
+  //   const dbRes0 = await db.query("select minplayers from tables");
+  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
+  //   await playersJoinGame(minplayers);
+  // });
+  // // table progresses from one round to next
+  // test("Game action - Bet", async () => {
+  //   // login minimum number of players and have them join a game
+  //   await joinGame(players[0]);
+  //   const dbRes0 = await db.query("select minplayers from tables");
+  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
+  //   await playersJoinGame(minplayers);
+  // });
+  // // table progresses from one round to next
+  // test("Game action - All in", async () => {
+  //   // login minimum number of players and have them join a game
+  //   await joinGame(players[0]);
+  //   const dbRes0 = await db.query("select minplayers from tables");
+  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
+  //   await playersJoinGame(minplayers);
+  // });
+
+  // // table progresses from one round to next
+  // test("Game progresses", async () => {
+
+  //   // login minimum number of players and have them join a game
+  //   await joinGame(players[0]);
+  //   const dbRes0 = await db.query("select minplayers from tables");
+  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
+  //   await playersJoinGame(minplayers);
+
+  //   // players all check and trigger a progress action event
+
+  // });
+
+  //For each player, check
+  // if player has not folded
+  // and player has not talked(bet) or player's bet is less than the highest bet at the table
+  // and player is not all in
+  //then set current player as this player and end of round is false
+  // else end of round is true
+
+  // if current player is last player, first player is set as current player, else move current player 1 down the table.
+
+  //Move all bets to the pot
+  // update roundBets
+
+  // if river
+  // set roundname to showdown
+  // update all bets to 0
+  //Evaluate each hand
+  //check for winners and bankrupts
+  // game over? or round over?
+
+  // If turn
+  // set roundname to river
+  //Burn a card
+  //Turn a card
+  // update all bets to 0
+  // set talked to false
+
+  // If flop
+  // set roundname to turn
+  //Burn a card
+  //Turn a card
+  // update all bets to 0
+  // set talked to false
+
+  // If deal
+  // set roundname to flop
+  //Burn a card
+  //Turn 3 cards
+  // update all bets to 0
+  // set talked to false
 
   // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
   // test("User logs in, gets seated at a table", async () => {
