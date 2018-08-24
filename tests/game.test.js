@@ -593,6 +593,166 @@ describe("Game Tests", () => {
       });
   });
 
+  test("Game action - Call", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
+
+    // Non current user cannot bet.  - p1 in 2p game
+    const uri = "/api/game/call";
+    const resCallNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resCallNotCurrent.statusCode).toBe(400);
+    expect(resCallNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
+
+    //Match the highest bet
+    const res = await db.query(
+      `SELECT max(bet) as max
+      FROM user_table 
+      WHERE table_id = (select table_id 
+                          from user_table 
+                          INNER JOIN users on users.id = user_table.player_id 
+                          where username = $1)`,
+      [currentPlayer.playerName]
+    );
+
+    const maxBet = parseInt(res.rows[0].max);
+
+    // get bet amount prior to betting
+    let totalChips = 0;
+    await db
+      .query(
+        `SELECT chips, bet FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes => {
+        totalChips = parseInt(dbRes.rows[0].chips);
+      });
+
+    //set current bet to 0 to test bet matching
+    await db.query(
+      `UPDATE user_table SET bet = 0
+         WHERE player_id = (select id from users where username = $1)`,
+      [currentPlayer.playerName]
+    );
+
+    // current player should be allowed to bet if he does have sufficient chips
+    let resCallCurrentUser = await request(app)
+      .post(uri)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    expect(resCallCurrentUser.statusCode).toBe(200);
+    expect(resCallCurrentUser.body).toContain("Success");
+
+    // if I'm allowed to bet then set my bet field to bet amount
+    // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked, lastaction, chips FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(maxBet);
+        expect(parseInt(dbRes1.rows[0].chips)).toBe(totalChips - maxBet);
+        expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("call");
+      });
+  });
+
+  // calling with max bet higher than my total chips
+  test("Game action - Call - All In", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
+
+    // Non current user cannot bet.  - p1 in 2p game
+    const uri = "/api/game/call";
+    const resCallNotCurrent = await request(app)
+      .post(uri)
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // notCurrentPlayer is unauthorized
+    expect(resCallNotCurrent.statusCode).toBe(400);
+    expect(resCallNotCurrent.body).toEqual({
+      notallowed: "Wrong user has made a move"
+    });
+
+    //Match the highest bet
+    const res = await db.query(
+      `SELECT max(bet) as max
+        FROM user_table 
+        WHERE table_id = (select table_id 
+                          from user_table 
+                          INNER JOIN users on users.id = user_table.player_id 
+                          where username = $1)`,
+      [currentPlayer.playerName]
+    );
+
+    const maxBet = parseInt(res.rows[0].max);
+
+    // get bet amount prior to betting
+    let totalChips = 0;
+    await db
+      .query(
+        `SELECT chips, bet FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes => {
+        totalChips = parseInt(dbRes.rows[0].chips);
+      });
+
+    const lessThanMax = maxBet - 10;
+    //set current bet to 0 and chips to less than max to test bet matching - all in
+    await db.query(
+      `UPDATE user_table SET bet = 0, chips = $2
+         WHERE player_id = (select id from users where username = $1)`,
+      [currentPlayer.playerName, lessThanMax]
+    );
+
+    // current player should be allowed to bet if he does have sufficient chips
+    let resCallCurrentUser = await request(app)
+      .post(uri)
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    expect(resCallCurrentUser.statusCode).toBe(200);
+    expect(resCallCurrentUser.body).toContain("All In");
+
+    // if I'm allowed to bet then set my bet field to bet amount
+    // set talked to true
+    await db
+      .query(
+        `SELECT bet, talked, lastaction, chips FROM user_table where player_id = (select id from users where username = $1)`,
+        [currentPlayer.playerName]
+      )
+      .then(dbRes1 => {
+        expect(parseInt(dbRes1.rows[0].bet)).toBe(lessThanMax);
+        expect(parseInt(dbRes1.rows[0].chips)).toBe(0);
+        expect(dbRes1.rows[0].talked).toBe(true);
+        expect(dbRes1.rows[0].lastaction).toBe("all in");
+      });
+  });
+
   // // table progresses from one round to next
   // test("Game action - Call", async () => {
   //   // login minimum number of players and have them join a game

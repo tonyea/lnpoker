@@ -480,8 +480,9 @@ const bet = async (userID, betAmount, cb) => {
       "SELECT chips FROM user_table WHERE player_id = $1",
       [userID]
     );
+    const totalChips = res.rows[0].chips;
 
-    if (res.rows[0].chips < betAmount) {
+    if (totalChips < betAmount) {
       return allin(userID, cb);
     }
 
@@ -518,7 +519,7 @@ const allin = async (userID, cb) => {
     );
     const totalChips = res.rows[0].chips;
 
-    if (res.rows[0].chips < 1) {
+    if (totalChips < 1) {
       errors.notallowed = "Can't bet more than number of chips owned.";
       return cb(errors, null);
     }
@@ -530,6 +531,53 @@ const allin = async (userID, cb) => {
     );
 
     return cb(null, "All In");
+    //Attemp to progress the game
+    // progress(this.table);
+  } catch (e) {
+    errors.notallowed = "Bet not allowed, replay please";
+    return cb(errors, null);
+  }
+};
+
+const call = async (userID, cb) => {
+  const errors = {};
+  try {
+    // check if it is my turn
+    const myTurn = await checkTurn(userID);
+    if (!myTurn) {
+      // return error if not
+      errors.notallowed = "Wrong user has made a move";
+      return cb(errors, null);
+    }
+
+    const res = await db.query(
+      `SELECT max(bet) as max
+      FROM user_table 
+        WHERE table_id = (select table_id 
+          from user_table
+                          where player_id = $1)`,
+      [userID]
+    );
+    const maxBet = parseInt(res.rows[0].max);
+
+    const res1 = await db.query(
+      "SELECT chips FROM user_table WHERE player_id = $1",
+      [userID]
+    );
+    const totalChips = res1.rows[0].chips;
+
+    if (totalChips < maxBet) {
+      return allin(userID, cb);
+    }
+
+    // Match the highest bet
+    // add chips to my bet, remove from chips, set talked = true
+    await db.query(
+      "UPDATE user_table SET talked=true, lastaction='call', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+      [userID, maxBet]
+    );
+
+    return cb(null, "Success");
     //Attemp to progress the game
     // progress(this.table);
   } catch (e) {
@@ -560,7 +608,14 @@ const checkTurn = async userID => {
   return res.rows[0].currentplayer;
 };
 
-module.exports = { joinTableIfItExists, exitTable, check, fold, bet };
+module.exports = {
+  joinTableIfItExists,
+  exitTable,
+  check,
+  fold,
+  bet,
+  call
+};
 
 // START GAME, TABLE STATE: Table {
 //   smallBlind: 50,

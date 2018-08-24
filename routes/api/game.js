@@ -6,6 +6,7 @@ const {
   check,
   fold,
   bet,
+  call,
   exitTable
 } = require("../../models/Table");
 
@@ -96,6 +97,25 @@ router.post(
     };
     // bet if it is player's turn
     bet(req.user.id, req.params.amount, returnResult);
+  }
+);
+
+router.post(
+  "/call",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    // callback function that returns error or table object
+    const returnResult = (errors, resultFromCaller = {}) => {
+      if (errors) {
+        // console.log("errors", errors);
+        res.status(400);
+        return res.json(errors);
+      }
+      // console.log("resultFromCaller", resultFromCaller);
+      return res.json(resultFromCaller);
+    };
+    // call if it is player's turn
+    call(req.user.id, returnResult);
   }
 );
 
