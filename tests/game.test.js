@@ -145,6 +145,7 @@ describe("Game Tests", () => {
     // first player has to create the table and others can join
     await joinGame(players[0]);
     const dbRes0 = await db.query("select minplayers from tables");
+    // console.log(dbRes0.rows);
     const numplayers = parseInt(dbRes0.rows[0].minplayers);
 
     let res;
@@ -754,69 +755,107 @@ describe("Game Tests", () => {
   });
 
   // // table progresses from one round to next
-  // test("Game action - Call", async () => {
-  //   // login minimum number of players and have them join a game
-  //   await joinGame(players[0]);
-  //   const dbRes0 = await db.query("select minplayers from tables");
-  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
-  //   await playersJoinGame(minplayers);
-  // });
+  test("Game progresses", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
 
-  // // table progresses from one round to next
-  // test("Game progresses", async () => {
+    // set current and non-current players
+    await setCurrentPlayer();
 
-  //   // login minimum number of players and have them join a game
-  //   await joinGame(players[0]);
-  //   const dbRes0 = await db.query("select minplayers from tables");
-  //   const minplayers = parseInt(dbRes0.rows[0].minplayers);
-  //   await playersJoinGame(minplayers);
+    // expecting currentplayer to be player2, notcurrentplayer to be p1
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
-  //   // players all check and trigger a progress action event
+    // I can't bet less than highest bet on the table - p2 in 2p game, small blind
+    await request(app)
+      .post("/api/game/bet/10")
+      .set("Authorization", currentPlayer.token)
+      .send();
 
-  // });
+    // current player stays as p2
+    await setCurrentPlayer();
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
 
-  //For each player, check
-  // if player has not folded
-  // and player has not talked(bet) or player's bet is less than the highest bet at the table
-  // and player is not all in
-  //then set current player as this player and end of round is false
-  // else end of round is true
+    // smallblind calls - p2 in 2p game
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", currentPlayer.token)
+      .send();
 
-  // if current player is last player, first player is set as current player, else move current player 1 down the table.
+    // expecting currentplayer to be player1, notcurrentplayer to be p2
+    await setCurrentPlayer();
+    expect(currentPlayer.playerName).toBe(players[0].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[1].playerName);
 
-  //Move all bets to the pot
-  // update roundBets
+    // big blind checks
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
 
-  // if river
-  // set roundname to showdown
-  // update all bets to 0
-  //Evaluate each hand
-  //check for winners and bankrupts
-  // game over? or round over?
+    // and triggers progress event again
+    // current player becomes non current and vice versa
+    await setCurrentPlayer();
+    expect(currentPlayer.playerName).toBe(players[1].playerName);
+    expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
-  // If turn
-  // set roundname to river
-  //Burn a card
-  //Turn a card
-  // update all bets to 0
-  // set talked to false
+    // sum of all bets match the pot amount
 
-  // If flop
-  // set roundname to turn
-  //Burn a card
-  //Turn a card
-  // update all bets to 0
-  // set talked to false
+    // all bets are moved to roundBets
 
-  // If deal
-  // set roundname to flop
-  //Burn a card
-  //Turn 3 cards
-  // update all bets to 0
-  // set talked to false
+    // check if roundname is deal
 
-  // once a game is started, if I join a table, I have to wait for a new round before I can get a hand of cards
-  // test("User logs in, gets seated at a table", async () => {
-  //   expect.assertions(3);
-  // });
+    // // roundname changes to flop
+
+    // // bets are all set to 0
+
+    // // burn a card and turn 3 - deck should have 4 less cards and board should have 3
+
+    // // all talked are set to false
+
+    //--- All users check
+
+    // check if roundname is flop
+
+    // // roundname changes to turn
+
+    // // bets are all set to 0
+
+    // // burn a card and turn 1 - deck should have 2 less cards and board should have 4
+
+    // // all talked are set to false
+
+    //--- All users check
+
+    // check if roundname is turn
+
+    // // roundname changes to river
+
+    // // burn a card and turn 1 - deck should have 2 less cards and board should have 5
+
+    // // bets are all set to 0
+
+    // // all talked are set to false
+
+    //--- All users check
+
+    // check if roundname is river
+
+    // // roundname changes to showdown
+
+    // // bets are all set to 0
+
+    // // winner is decided
+  });
+
+  // check for bankrupt
+
+  // new round initiation
+
+  // test certain losing hand against certain winning hand
+
+  // test all player against part in
+  // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
+
+  // test tie round
 });

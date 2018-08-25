@@ -408,6 +408,8 @@ const check = async (userID, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
+      //Attempt to progress the game
+      await progress(userID);
       return cb(null, "Success");
     }
     errors.notupdated = "Did not update action and talked state";
@@ -448,6 +450,8 @@ const fold = async (userID, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
+      //Attempt to progress the game
+      await progress(userID);
       return cb(null, "Success");
     }
     errors.notupdated = "Did not update action and talked state";
@@ -483,7 +487,7 @@ const bet = async (userID, betAmount, cb) => {
     const totalChips = res.rows[0].chips;
 
     if (totalChips < betAmount) {
-      return allin(userID, cb);
+      return await allin(userID, cb);
     }
 
     // add chips to my bet, remove from chips, set talked = true
@@ -492,9 +496,9 @@ const bet = async (userID, betAmount, cb) => {
       [userID, betAmount]
     );
 
+    //Attempt to progress the game
+    await progress(userID);
     return cb(null, "Success");
-    //Attemp to progress the game
-    // progress(this.table);
   } catch (e) {
     errors.notallowed = "Bet not allowed, replay please";
     return cb(errors, null);
@@ -530,13 +534,25 @@ const allin = async (userID, cb) => {
       [userID, totalChips]
     );
 
+    //Attempt to progress the game
+    await progress(userID);
     return cb(null, "All In");
-    //Attemp to progress the game
-    // progress(this.table);
   } catch (e) {
     errors.notallowed = "Bet not allowed, replay please";
     return cb(errors, null);
   }
+};
+
+const getMaxBet = async userID => {
+  const res = await db.query(
+    `SELECT max(bet) as max
+    FROM user_table 
+      WHERE table_id = (select table_id 
+        from user_table
+                        where player_id = $1)`,
+    [userID]
+  );
+  return parseInt(res.rows[0].max);
 };
 
 const call = async (userID, cb) => {
@@ -550,15 +566,7 @@ const call = async (userID, cb) => {
       return cb(errors, null);
     }
 
-    const res = await db.query(
-      `SELECT max(bet) as max
-      FROM user_table 
-        WHERE table_id = (select table_id 
-          from user_table
-                          where player_id = $1)`,
-      [userID]
-    );
-    const maxBet = parseInt(res.rows[0].max);
+    const maxBet = await getMaxBet(userID);
 
     const res1 = await db.query(
       "SELECT chips FROM user_table WHERE player_id = $1",
@@ -567,29 +575,196 @@ const call = async (userID, cb) => {
     const totalChips = res1.rows[0].chips;
 
     if (totalChips < maxBet) {
-      return allin(userID, cb);
+      return await allin(userID, cb);
     }
 
     // Match the highest bet
     // add chips to my bet, remove from chips, set talked = true
     await db.query(
-      "UPDATE user_table SET talked=true, lastaction='call', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+      "UPDATE user_table SET talked=true, lastaction='call', bet= $2, chips=chips-$2 WHERE player_id = $1 returning * ",
       [userID, maxBet]
     );
 
+    await progress(userID);
     return cb(null, "Success");
     //Attemp to progress the game
-    // progress(this.table);
   } catch (e) {
     errors.notallowed = "Bet not allowed, replay please";
     return cb(errors, null);
   }
 };
 
-//   //Attemp to progress the game
-//   this.turnBet = {action: "allin", playerName: this.playerName, amount: allInValue}
-//   progress(this.table);
-// };
+const progress = async userID => {
+  const res = await db.query(
+    `
+    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board  
+    FROM user_table 
+    INNER JOIN TABLES
+    ON user_table.table_id = tables.id
+    WHERE table_id = (SELECT table_id 
+                      FROM user_table
+                      WHERE player_id = $1)
+    ORDER BY user_table.id;
+    `,
+    [userID]
+  );
+
+  const status = res.rows[0].status;
+  const roundname = res.rows[0].roundname;
+  const board = res.rows[0].board;
+  const userTable = res.rows;
+  // if status of game is started then progress, else null
+  if (status === "started") {
+    // only progress game if it is end of round
+    if ((await checkForEndOfRound(userID)) === true) {
+      // if current player is last player, first player is set as current player, else move current player 1 down the table.
+      const currentPlayerIndex = userTable.findIndex(
+        user => user.currentplayer === true
+      );
+      const newCurrentPlayerIndex =
+        currentPlayerIndex >= userTable.length - 1
+          ? currentPlayerIndex - userTable.length + 1
+          : currentPlayerIndex + 1;
+      const newCurrentPlayerID = userTable[newCurrentPlayerIndex].player_id;
+
+      setCurrentPlayer(newCurrentPlayerID, tableID);
+
+      //Move all bets to the pot
+      moveAllBetsToPot(userID);
+
+      if (roundname === "River") {
+        setRoundName("Showdown", userID);
+        //Evaluate each hand
+        for (let j = 0; j < userTable.length; j += 1) {
+          let cards = userTable[j].cards.concat(board);
+          let hand = new Hand(cards);
+          setHand(userTable[j].player_id, rankHand(hand));
+        }
+        checkForWinner(userID);
+        checkForBankrupt(userID);
+      } else if (roundname === "Turn") {
+        setRoundName("River", userID);
+        burnTurn(1, userID);
+        removeTalked(userID);
+      } else if (roundname === "Flop") {
+        setRoundName("Turn", userID);
+        burnTurn(1, userID);
+        removeTalked(userID);
+      } else if (roundname === "Deal") {
+        setRoundName("Flop", userID);
+        burnTurn(3, userID);
+        removeTalked(userID);
+      }
+    }
+  }
+};
+
+const setRoundName = async (roundname, userID) => {
+  await db.query(
+    `
+    UPDATE tables 
+    SET roundname = $1
+    WHERE table_id = (
+        SELECT table_id 
+        FROM user_table
+        WHERE player_id = $2
+    )      
+  `,
+    [roundname, userID]
+  );
+};
+
+const burnTurn = async (numTurn, userID) => {};
+const setHand = async (userID, rank) => {};
+const checkForWinner = async userID => {};
+const checkForBankrupt = async userID => {};
+const removeTalked = async userID => {};
+
+const setCurrentPlayer = async (userID, tableID) => {
+  await db.query(
+    "UPDATE user_table SET currentplayer = true WHERE player_id=$1 AND table_id=$2",
+    [userID, tableID]
+  );
+  await db.query(
+    "UPDATE user_table SET currentplayer = false WHERE player_id!=$1 AND table_id=$2",
+    [userID, tableID]
+  );
+};
+
+const moveAllBetsToPot = async userID => {
+  // update pot
+  await db.query(
+    `
+    UPDATE tables 
+    SET pot = (
+        SELECT SUM(bet) 
+          FROM user_table
+          WHERE table_id = (
+              SELECT table_id 
+              FROM user_table
+              WHERE player_id = $1
+          )
+      )
+    WHERE id = (
+        SELECT table_id 
+        FROM user_table
+        WHERE player_id = $1
+    )
+  `,
+    [userID]
+  );
+
+  // append roundBets with bet amounts. set bet to 0
+  await db.query(
+    `
+    UPDATE user_table 
+    SET roundBet = bet+ roundBet, bet=0
+    WHERE table_id = (
+        SELECT table_id 
+        FROM user_table
+        WHERE player_id = $1
+    )      
+  `,
+    [userID]
+  );
+};
+
+// gets table, returns bool
+const checkForEndOfRound = async userID => {
+  let i, players;
+  let endOfRound = true;
+  const maxBet = await getMaxBet(userID);
+  await db
+    .query(
+      `
+      SELECT player_id, lastaction, bet, table_id
+      FROM user_table 
+      WHERE table_id = (SELECT table_id 
+                        FROM user_table
+                        WHERE player_id = $1)
+                `,
+      [userID]
+    )
+    .then(res => {
+      players = res.rows;
+    });
+  //For each player, check
+  for (i = 0; i < players.length; i += 1) {
+    // if player has not folded
+    if (players[i].lastaction !== "fold") {
+      // and player has not talked(bet) or player's bet is less than the highest bet at the table
+      if (players[i].talked === false || players[i].bets !== maxBet) {
+        // and player is not all in
+        if (players[i].lastaction !== "all in") {
+          //then set current player as this player and end of round is false
+          setCurrentPlayer(players[i].player_id, players[i].table_id);
+          endOfRound = false;
+        }
+      }
+    }
+  }
+  return endOfRound;
+};
 
 // @desc - check if it is player's turn
 // @params - userID of player being checked
@@ -616,112 +791,3 @@ module.exports = {
   bet,
   call
 };
-
-// START GAME, TABLE STATE: Table {
-//   smallBlind: 50,
-//   bigBlind: 100,
-//   minPlayers: 4,
-//   maxPlayers: 10,
-//   players:
-//    [ Player {
-//        playerName: 'bob',
-//        chips: 1000,
-//        folded: false,
-//        allIn: false,
-//        talked: false,
-//        table: [Circular],
-//        cards: [Array] },
-//      Player {
-//        playerName: 'jane',
-//        chips: 950,
-//        folded: false,
-//        allIn: false,
-//        talked: false,
-//        table: [Circular],
-//        cards: [Array] },
-//      Player {
-//        playerName: 'dylan',
-//        chips: 900,
-//        folded: false,
-//        allIn: false,
-//        talked: false,
-//        table: [Circular],
-//        cards: [Array] },
-//      Player {
-//        playerName: 'john',
-//        chips: 1000,
-//        folded: false,
-//        allIn: false,
-//        talked: false,
-//        table: [Circular],
-//        cards: [Array] } ],
-//   dealer: 0,
-//   minBuyIn: 100,
-//   maxBuyIn: 1000,
-//   playersToRemove: [],
-//   playersToAdd: [],
-//   eventEmitter:
-//    EventEmitter {
-//      domain: null,
-//      _events: {},
-//      _eventsCount: 0,
-//      _maxListeners: undefined },
-//   turnBet: {},
-//   gameWinners: [],
-//   gameLosers: [],
-//   game:
-//    Game {
-//      smallBlind: 50,
-//      bigBlind: 100,
-//      pot: 0,
-//      roundName: 'Deal',
-//      betName: 'bet',
-//      bets: [ 0, 50, 100, 0 ],
-//      roundBets: [ 0, 0, 0, 0 ],
-//      deck:
-//       [ 'KS',
-//         'KH',
-//         'QD',
-//         '9S',
-//         '2S',
-//         '5D',
-//         '4D',
-//         'QS',
-//         '2H',
-//         '9C',
-//         'AH',
-//         'QC',
-//         '5S',
-//         '6S',
-//         'TH',
-//         'TC',
-//         '5H',
-//         '3C',
-//         '3H',
-//         '6C',
-//         'TD',
-//         'JC',
-//         '4S',
-//         '8H',
-//         '4H',
-//         '9D',
-//         '4C',
-//         'KD',
-//         '3D',
-//         '5C',
-//         '2C',
-//         'AC',
-//         '9H',
-//         '7S',
-//         '8D',
-//         'TS',
-//         'JH',
-//         'KC',
-//         '3S',
-//         '8S',
-//         '6H',
-//         'AD',
-//         'JD',
-//         'AS' ],
-//      board: [] },
-//   currentPlayer: 3 }
