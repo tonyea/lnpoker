@@ -1,4 +1,5 @@
 const db = require("../db");
+const { rankHand } = require("./Rank");
 
 // @params NA
 // @return table if already created, else false
@@ -597,7 +598,7 @@ const call = async (userID, cb) => {
 const progress = async userID => {
   const res = await db.query(
     `
-    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board  
+    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board, lastaction, username  
     FROM user_table 
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
@@ -627,33 +628,33 @@ const progress = async userID => {
           : currentPlayerIndex + 1;
       const newCurrentPlayerID = userTable[newCurrentPlayerIndex].player_id;
 
-      setCurrentPlayer(newCurrentPlayerID, tableID);
+      await setCurrentPlayer(newCurrentPlayerID, tableID);
 
       //Move all bets to the pot
-      moveAllBetsToPot(userID);
+      await moveAllBetsToPot(userID);
 
       if (roundname === "River") {
         setRoundName("Showdown", userID);
         //Evaluate each hand
         for (let j = 0; j < userTable.length; j += 1) {
           let cards = userTable[j].cards.concat(board);
-          let hand = new Hand(cards);
-          setHand(userTable[j].player_id, rankHand(hand));
+          let hand = { cards };
+          await setRank(userTable[j].player_id, rankHand(hand));
         }
-        checkForWinner(userID);
-        checkForBankrupt(userID);
+        await checkForWinner(userTable);
+        await checkForBankrupt(userID);
       } else if (roundname === "Turn") {
-        setRoundName("River", userID);
-        burnTurn(1, userID);
-        removeTalked(userID);
+        await setRoundName("River", userID);
+        await burnTurn(1, userID);
+        await removeTalked(userID);
       } else if (roundname === "Flop") {
-        setRoundName("Turn", userID);
-        burnTurn(1, userID);
-        removeTalked(userID);
+        await setRoundName("Turn", userID);
+        await burnTurn(1, userID);
+        await removeTalked(userID);
       } else if (roundname === "Deal") {
-        setRoundName("Flop", userID);
-        burnTurn(3, userID);
-        removeTalked(userID);
+        await setRoundName("Flop", userID);
+        await burnTurn(3, userID);
+        await removeTalked(userID);
       }
     }
   }
@@ -674,11 +675,214 @@ const setRoundName = async (roundname, userID) => {
   );
 };
 
-const burnTurn = async (numTurn, userID) => {};
-const setHand = async (userID, rank) => {};
-const checkForWinner = async userID => {};
-const checkForBankrupt = async userID => {};
-const removeTalked = async userID => {};
+const burnTurn = async (numTurn, userID) => {
+  let deck, board;
+
+  // get deck from DB
+  await db
+    .query(
+      "SELECT deck, board FROM tables WHERE id = (SELECT table_id FROM user_table WHERE player_id = $2)",
+      [userID]
+    )
+    .then(res => {
+      deck = res.rows[0].deck;
+      board = res.rows[0].board;
+    });
+
+  // burn one card
+  deck.pop(); //Burn a card
+
+  // Deal numTurn cards to board
+  for (i = 0; i < numTurn; i += 1) {
+    board.push(deck.pop());
+  }
+
+  // prep variable for postgres query
+  board = "{" + board.join() + "}";
+
+  // persist remaining deck and append to board
+  await db.query(
+    "UPDATE tables SET deck = $1, board= $2 WHERE id=$2 RETURNING *",
+    ["{" + deck.join() + "}", tableID]
+  );
+};
+
+// set rank in DB
+const setRank = async (userID, rank) => {
+  await db.query("UPDATE user_table SET rank = $1 WHERE player_id=$2", [
+    rank,
+    userID
+  ]);
+};
+
+const checkForWinner = async players => {
+  let i, j, k, l, maxRank, winners, part, prize, allInPlayer, minBets, roundEnd;
+
+  //Identify winner(s)
+  winners = [];
+  maxRank = 0.0;
+  for (k = 0; k < players.length; k += 1) {
+    // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
+    if (players[k].hand.rank === maxRank && players[k].folded === false) {
+      winners.push(players[k]);
+    }
+    if (players[k].hand.rank > maxRank && players[k].folded === false) {
+      // start by setting the first player's rank to the max rank
+      maxRank = players[k].hand.rank;
+      // reset winners array to 0
+      winners.splice(0, winners.length);
+      // push the first player to the winners array
+      winners.push(players[k]);
+    }
+  }
+
+  part = 0;
+  prize = 0;
+  // check if any of the winners is all in
+  allInPlayer = checkForAllInPlayer(winners);
+  if (allInPlayer.length > 0) {
+    // if yes, then set the minbets to the lowest all in player's bet amount
+    minBets = winners[0].roundbet;
+    for (j = 1; j < allInPlayer.length; j += 1) {
+      if (winners[j].roundbet !== 0 && winners[j].roundbet < minBets) {
+        minBets = winners[j].roundbet;
+      }
+    }
+    part = parseInt(minBets, 10);
+  } else {
+    part = parseInt(winners[0].roundbet, 10);
+  }
+
+  // if a player has less than the winner's part then he loses only that part not more than the winner has in roundBets
+  for (l = 0; l < players.length; l += 1) {
+    if (players[l].roundbet > part) {
+      prize += part;
+      const lostAmount = players[l].roundbet - part;
+      setRoundBet(players[l].player_id, lostAmount);
+    } else {
+      prize += players[l].roundbet;
+      setRoundBet(players[l].player_id, 0);
+    }
+  }
+
+  // for each winner, distribute his prize split evenly
+  for (i = 0; i < winners.length; i += 1) {
+    let winnerPrize = prize / winners.length;
+    let winningPlayer = winners[i];
+    winningPlayer.chips += winnerPrize;
+    setChips(winningPlayer.player_id, winnerPrize);
+    if (winners[i].roundbet === 0) {
+      setLastAction(winningPlayer.player_id, "fold");
+      winningPlayer.folded = true;
+    }
+    // send message about winner
+    console.log({
+      playerName: winningPlayer.username,
+      amount: winnerPrize,
+      hand: winningPlayer.hand,
+      chips: winningPlayer.chips + winnerPrize
+    });
+    console.log("player " + winners[i].username + " wins !!");
+  }
+
+  roundEnd = true;
+  for (l = 0; l < table.game.roundBets.length; l += 1) {
+    if (table.game.roundBets[l] !== 0) {
+      roundEnd = false;
+    }
+  }
+  if (roundEnd === false) {
+    checkForWinner(table);
+  }
+};
+
+const checkForBankrupt = async userID => {
+  // if a player on the table has 0 chips
+  // remove player from table
+  await db
+    .query(
+      `
+        DELETE FROM user_table
+        WHERE table_id = (SELECT table_id FROM user_table WHERE player_id = $2)
+        AND chips = 0
+        RETURNING *
+        `,
+      [userID]
+    )
+    .then(res => {
+      if (res.rows.length > 0) {
+        // for each player that has gone bankrupt, send a message that he has left the table
+        res.rows.forEach(player =>
+          console.log(
+            player.player_id + " has gone bankrupt and left the table!"
+          )
+        );
+      }
+    });
+
+  let i;
+  for (i = 0; i < table.players.length; i += 1) {
+    if (table.players[i].chips === 0) {
+      table.gameLosers.push(table.players[i]);
+      console.log(
+        "player " + table.players[i].playerName + " is going bankrupt"
+      );
+      table.players.splice(i, 1);
+    }
+  }
+};
+
+// return players that are all in
+const checkForAllInPlayer = players => {
+  let i, allInPlayer;
+  allInPlayer = [];
+  for (i = 0; i < players.length; i += 1) {
+    if (players[i].lastaction === "all in") {
+      allInPlayer.push(players[i]);
+    }
+  }
+  return allInPlayer;
+};
+
+// set talked field to false
+const removeTalked = async userID => {
+  await db.query("UPDATE user_table SET talked = false WHERE player_id=$1", [
+    userID
+  ]);
+};
+
+// set roundbet field to input
+const setRoundBet = async (userID, amount) => {
+  await db.query("UPDATE user_table SET roundbet = $2 WHERE player_id=$1", [
+    userID,
+    amount
+  ]);
+};
+
+// set chips field to input
+const setChips = async (userID, amount) => {
+  await db.query(
+    "UPDATE user_table SET chips = chips + $2 WHERE player_id=$1",
+    [userID, amount]
+  );
+};
+
+// set lastaction field to input
+const setLastAction = async (userID, action) => {
+  await db.query("UPDATE user_table SET lastaction = $2 WHERE player_id=$1", [
+    userID,
+    action
+  ]);
+};
+
+// get rank for the hand passed through
+const rankHand = hand => {
+  let myResult = rankHandInt(hand);
+  hand.rank = myResult.rank;
+  hand.message = myResult.message;
+
+  return hand;
+};
 
 const setCurrentPlayer = async (userID, tableID) => {
   await db.query(
