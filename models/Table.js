@@ -1,5 +1,5 @@
 const db = require("../db");
-const { rankHand } = require("./Rank");
+const { rankHandInt } = require("./Rank");
 
 // @params NA
 // @return table if already created, else false
@@ -415,11 +415,9 @@ const check = async (userID, cb) => {
     }
     errors.notupdated = "Did not update action and talked state";
     return cb(errors, null);
-
-    //Attemp to progress the game
-    // progress(this.table);
   } catch (e) {
     errors.notallowed = "Check not allowed, replay please";
+    console.log(e);
     return cb(errors, null);
   }
 
@@ -582,7 +580,7 @@ const call = async (userID, cb) => {
     // Match the highest bet
     // add chips to my bet, remove from chips, set talked = true
     await db.query(
-      "UPDATE user_table SET talked=true, lastaction='call', bet= $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+      "UPDATE user_table SET talked=true, lastaction='call', chips=chips-$2+bet, bet= $2 WHERE player_id = $1 returning * ",
       [userID, maxBet]
     );
 
@@ -598,7 +596,7 @@ const call = async (userID, cb) => {
 const progress = async userID => {
   const res = await db.query(
     `
-    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board, lastaction, username  
+    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board, lastaction  
     FROM user_table 
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
@@ -613,6 +611,7 @@ const progress = async userID => {
   const status = res.rows[0].status;
   const roundname = res.rows[0].roundname;
   const board = res.rows[0].board;
+  const tableID = res.rows[0].table_id;
   const userTable = res.rows;
   // if status of game is started then progress, else null
   if (status === "started") {
@@ -628,6 +627,7 @@ const progress = async userID => {
           : currentPlayerIndex + 1;
       const newCurrentPlayerID = userTable[newCurrentPlayerIndex].player_id;
 
+      console.log("newCurrentPlayerID", newCurrentPlayerID);
       await setCurrentPlayer(newCurrentPlayerID, tableID);
 
       //Move all bets to the pot
@@ -665,7 +665,7 @@ const setRoundName = async (roundname, userID) => {
     `
     UPDATE tables 
     SET roundname = $1
-    WHERE table_id = (
+    WHERE id = (
         SELECT table_id 
         FROM user_table
         WHERE player_id = $2
@@ -777,12 +777,12 @@ const checkForWinner = async players => {
     }
     // send message about winner
     console.log({
-      playerName: winningPlayer.username,
+      playerName: winningPlayer.player_id,
       amount: winnerPrize,
       hand: winningPlayer.hand,
       chips: winningPlayer.chips + winnerPrize
     });
-    console.log("player " + winners[i].username + " wins !!");
+    console.log("player " + winners[i].player_id + " wins !!");
   }
 
   roundEnd = true;
@@ -941,7 +941,7 @@ const checkForEndOfRound = async userID => {
   await db
     .query(
       `
-      SELECT player_id, lastaction, bet, table_id
+      SELECT player_id, lastaction, bet, table_id, talked
       FROM user_table 
       WHERE table_id = (SELECT table_id 
                         FROM user_table
@@ -957,11 +957,11 @@ const checkForEndOfRound = async userID => {
     // if player has not folded
     if (players[i].lastaction !== "fold") {
       // and player has not talked(bet) or player's bet is less than the highest bet at the table
-      if (players[i].talked === false || players[i].bets !== maxBet) {
+      if (players[i].talked === false || players[i].bet !== maxBet) {
         // and player is not all in
         if (players[i].lastaction !== "all in") {
           //then set current player as this player and end of round is false
-          setCurrentPlayer(players[i].player_id, players[i].table_id);
+          await setCurrentPlayer(players[i].player_id, players[i].table_id);
           endOfRound = false;
         }
       }

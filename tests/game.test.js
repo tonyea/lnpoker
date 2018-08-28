@@ -303,19 +303,21 @@ describe("Game Tests", () => {
   const setCurrentPlayer = async () => {
     await db
       .query(
-        `select username, currentplayer
-      from user_table
-      inner join users on users.id = user_table.player_id where currentplayer=true`
+        `
+      SELECT username, currentplayer
+      FROM user_table
+      INNER JOIN users ON users.id = user_table.player_id 
+      WHERE currentplayer=true`
       )
-      .then(async res1 => {
-        // get current player - p2 in 2p game
+      .then(async res => {
+        // get current player
         currentPlayer = players.find(player => {
-          return player.playerName === res1.rows[0].username;
+          return player.playerName === res.rows[0].username;
         });
 
-        // get player who is not current - p1 in 2p game
+        // get player who is not current
         notCurrentPlayer = players.find(player => {
-          return player.playerName !== res1.rows[0].username;
+          return player.playerName !== res.rows[0].username;
         });
       });
   };
@@ -768,7 +770,7 @@ describe("Game Tests", () => {
 
     // I can't bet less than highest bet on the table - p2 in 2p game, small blind
     await request(app)
-      .post("/api/game/bet/10")
+      .post("/api/game/bet/1")
       .set("Authorization", currentPlayer.token)
       .send();
 
@@ -799,7 +801,7 @@ describe("Game Tests", () => {
     expect(currentPlayer.playerName).toBe(players[1].playerName);
     expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
-    // sum of all bets match the pot amount
+    // sum of all bets match the pot amount - should be 2x big blind
 
     // all bets are moved to roundBets
 

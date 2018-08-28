@@ -1539,14 +1539,6 @@ const rankHandInt = hand => {
   return result;
 };
 
-const rankHand = hand => {
-  let myResult = rankHandInt(hand);
-  hand.rank = myResult.rank;
-  hand.message = myResult.message;
-
-  return hand;
-};
-
 module.exports = {
-  rankHand
+  rankHandInt
 };
