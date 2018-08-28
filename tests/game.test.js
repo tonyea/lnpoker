@@ -837,38 +837,101 @@ describe("Game Tests", () => {
     });
 
     //--- All users check
+    await setCurrentPlayer();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
 
-    // check if roundname is flop
+    await db
+      .query("SELECT roundbet, bet, talked FROM user_table")
+      .then(res2 => {
+        // all bets are moved to roundBets - roundbets should have 1x big blind each
+        expect(res2.rows[0].roundbet).toBe(bigBlind);
+        expect(res2.rows[1].roundbet).toBe(bigBlind);
+        // // bets are all set to 0
+        expect(res2.rows[0].bet).toBe(0);
+        expect(res2.rows[1].bet).toBe(0);
+        // // all talked are set to false
+        expect(res2.rows[0].talked).toBe(false);
+        expect(res2.rows[1].talked).toBe(false);
+      });
 
-    // // roundname changes to turn
-
-    // // bets are all set to 0
-
-    // // burn a card and turn 1 - deck should have 2 less cards and board should have 4
-
-    // // all talked are set to false
+    await db.query("SELECT roundname, deck, board FROM tables").then(res => {
+      // roundname changes to turn
+      expect(res.rows[0].roundname).toBe("Turn");
+      // burn a card and turn 1 - deck should have 2 less cards and board should have 4
+      expect(res.rows[0].deck.length).toBe(42);
+      expect(res.rows[0].board.length).toBe(4);
+    });
 
     //--- All users check
+    await setCurrentPlayer();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
 
-    // check if roundname is turn
+    await db
+      .query("SELECT roundbet, bet, talked FROM user_table")
+      .then(res2 => {
+        // all bets are moved to roundBets - roundbets should have 1x big blind each
+        expect(res2.rows[0].roundbet).toBe(bigBlind);
+        expect(res2.rows[1].roundbet).toBe(bigBlind);
+        // // bets are all set to 0
+        expect(res2.rows[0].bet).toBe(0);
+        expect(res2.rows[1].bet).toBe(0);
+        // // all talked are set to false
+        expect(res2.rows[0].talked).toBe(false);
+        expect(res2.rows[1].talked).toBe(false);
+      });
 
-    // // roundname changes to river
-
-    // // burn a card and turn 1 - deck should have 2 less cards and board should have 5
-
-    // // bets are all set to 0
-
-    // // all talked are set to false
+    await db.query("SELECT roundname, deck, board FROM tables").then(res => {
+      // roundname changes to turn
+      expect(res.rows[0].roundname).toBe("River");
+      // // burn a card and turn 1 - deck should have 2 less cards and board should have 5
+      expect(res.rows[0].deck.length).toBe(40);
+      expect(res.rows[0].board.length).toBe(5);
+    });
 
     //--- All users check
+    await setCurrentPlayer();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
 
-    // check if roundname is river
+    await db
+      .query("SELECT roundbet, bet, talked FROM user_table")
+      .then(res2 => {
+        // at end of showdown roundbets are 0
+        expect(res2.rows[0].roundbet).toBe(0);
+        expect(res2.rows[1].roundbet).toBe(0);
+        // // bets are all set to 0
+        expect(res2.rows[0].bet).toBe(0);
+        expect(res2.rows[1].bet).toBe(0);
+      });
 
-    // // roundname changes to showdown
-
-    // // bets are all set to 0
+    await db.query("SELECT roundname FROM tables").then(res => {
+      // roundname changes to showdown
+      expect(res.rows[0].roundname).toBe("Showdown");
+    });
 
     // // winner is decided
+    // pot is 0
+    // sum(chips should be original)
   });
 
   // check for bankrupt

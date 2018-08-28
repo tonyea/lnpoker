@@ -202,9 +202,7 @@ const joinTableIfItExists = async (cb, userID) => {
 // @params - userID from request
 // returns errors or table data
 const exitTable = async userID => {
-  await db.query("DELETE FROM user_table WHERE user_table.player_id = $1", [
-    userID
-  ]);
+  await db.query("DELETE FROM user_table WHERE player_id = $1", [userID]);
 };
 
 // @desc - trigger this to start a new round
@@ -596,7 +594,7 @@ const call = async (userID, cb) => {
 const progress = async userID => {
   const res = await db.query(
     `
-    SELECT user_table.id as id, currentplayer, bet, player_id, table_id, status, roundname, board, lastaction  
+    SELECT user_table.id as id, currentplayer, bet, cards, player_id, table_id, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
     FROM user_table 
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
@@ -627,7 +625,6 @@ const progress = async userID => {
           : currentPlayerIndex + 1;
       const newCurrentPlayerID = userTable[newCurrentPlayerIndex].player_id;
 
-      console.log("newCurrentPlayerID", newCurrentPlayerID);
       await setCurrentPlayer(newCurrentPlayerID, tableID);
 
       //Move all bets to the pot
@@ -638,8 +635,8 @@ const progress = async userID => {
         //Evaluate each hand
         for (let j = 0; j < userTable.length; j += 1) {
           let cards = userTable[j].cards.concat(board);
-          let hand = { cards };
-          await setRank(userTable[j].player_id, rankHand(hand));
+          let hand = await rankHand({ cards });
+          await setRank(userTable[j].player_id, hand);
         }
         await checkForWinner(userTable);
         await checkForBankrupt(userID);
@@ -693,7 +690,6 @@ const burnTurn = async (numTurn, userID) => {
   // burn one card
   deck.pop(); //Burn a card
 
-  console.log("numTurn", numTurn);
   // Deal numTurn cards to board
   for (i = 0; i < numTurn; i += 1) {
     board.push(deck.pop());
@@ -701,7 +697,6 @@ const burnTurn = async (numTurn, userID) => {
 
   // prep variable for postgres query
   board = "{" + board.join() + "}";
-  console.log("board", board);
   // persist remaining deck and append to board
   await db.query(
     "UPDATE tables SET deck = $1, board= $2 WHERE id=$3 RETURNING *",
@@ -710,11 +705,14 @@ const burnTurn = async (numTurn, userID) => {
 };
 
 // set rank in DB
-const setRank = async (userID, rank) => {
-  await db.query("UPDATE user_table SET rank = $1 WHERE player_id=$2", [
-    rank,
-    userID
-  ]);
+const setRank = async (userID, hand) => {
+  // console.log(rank);
+  const rank = hand.rank;
+  const rankname = hand.message;
+  await db.query(
+    "UPDATE user_table SET rank = $1, rankname=$2 WHERE player_id=$3",
+    [rank, rankname, userID]
+  );
 };
 
 const checkForWinner = async players => {
@@ -724,13 +722,14 @@ const checkForWinner = async players => {
   winners = [];
   maxRank = 0.0;
   for (k = 0; k < players.length; k += 1) {
+    const rank = parseFloat(players[k].rank);
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
-    if (players[k].hand.rank === maxRank && players[k].folded === false) {
+    if (rank === maxRank && players[k].lastaction !== "fold") {
       winners.push(players[k]);
     }
-    if (players[k].hand.rank > maxRank && players[k].folded === false) {
+    if (rank > maxRank && players[k].lastaction !== "fold") {
       // start by setting the first player's rank to the max rank
-      maxRank = players[k].hand.rank;
+      maxRank = rank;
       // reset winners array to 0
       winners.splice(0, winners.length);
       // push the first player to the winners array
@@ -761,40 +760,41 @@ const checkForWinner = async players => {
       prize += part;
       const lostAmount = players[l].roundbet - part;
       setRoundBet(players[l].player_id, lostAmount);
+      players[l].roundbet = lostAmount;
     } else {
       prize += players[l].roundbet;
       setRoundBet(players[l].player_id, 0);
+      players[l].roundbet = 0;
     }
   }
 
   // for each winner, distribute his prize split evenly
   for (i = 0; i < winners.length; i += 1) {
-    let winnerPrize = prize / winners.length;
+    let winnerPrize = parseFloat(prize / winners.length);
     let winningPlayer = winners[i];
-    winningPlayer.chips += winnerPrize;
-    setChips(winningPlayer.player_id, winnerPrize);
+    setChipsAndPot(winningPlayer.player_id, winnerPrize);
     if (winners[i].roundbet === 0) {
       setLastAction(winningPlayer.player_id, "fold");
-      winningPlayer.folded = true;
     }
     // send message about winner
     console.log({
       playerName: winningPlayer.player_id,
       amount: winnerPrize,
-      hand: winningPlayer.hand,
-      chips: winningPlayer.chips + winnerPrize
+      hand: winningPlayer.rankname,
+      chips: parseFloat(winningPlayer.chips) + winnerPrize
     });
-    console.log("player " + winners[i].player_id + " wins !!");
+    console.log("player " + winningPlayer.player_id + " wins !!");
   }
 
+  // if any player doesn't have roundbet of 0, check for winner again
   roundEnd = true;
-  for (l = 0; l < table.game.roundBets.length; l += 1) {
-    if (table.game.roundBets[l] !== 0) {
+  for (l = 0; l < players.length; l += 1) {
+    if (players[l].roundbet !== 0) {
       roundEnd = false;
     }
   }
   if (roundEnd === false) {
-    checkForWinner(table);
+    checkForWinner(players);
   }
 };
 
@@ -805,7 +805,7 @@ const checkForBankrupt = async userID => {
     .query(
       `
         DELETE FROM user_table
-        WHERE table_id = (SELECT table_id FROM user_table WHERE player_id = $2)
+        WHERE table_id = (SELECT table_id FROM user_table WHERE player_id = $1)
         AND chips = 0
         RETURNING *
         `,
@@ -821,17 +821,6 @@ const checkForBankrupt = async userID => {
         );
       }
     });
-
-  let i;
-  for (i = 0; i < table.players.length; i += 1) {
-    if (table.players[i].chips === 0) {
-      table.gameLosers.push(table.players[i]);
-      console.log(
-        "player " + table.players[i].playerName + " is going bankrupt"
-      );
-      table.players.splice(i, 1);
-    }
-  }
 };
 
 // return players that are all in
@@ -863,10 +852,15 @@ const setRoundBet = async (userID, amount) => {
 };
 
 // set chips field to input
-const setChips = async (userID, amount) => {
+const setChipsAndPot = async (userID, amount) => {
   await db.query(
     "UPDATE user_table SET chips = chips + $2 WHERE player_id=$1",
     [userID, amount]
+  );
+
+  await db.query(
+    "UPDATE tables SET pot = 0 WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1)",
+    [userID]
   );
 };
 
@@ -903,7 +897,7 @@ const moveAllBetsToPot = async userID => {
   await db.query(
     `
     UPDATE tables 
-    SET pot = (
+    SET pot = pot + (
         SELECT SUM(bet) 
           FROM user_table
           WHERE table_id = (
