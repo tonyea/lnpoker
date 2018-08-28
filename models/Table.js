@@ -676,22 +676,24 @@ const setRoundName = async (roundname, userID) => {
 };
 
 const burnTurn = async (numTurn, userID) => {
-  let deck, board;
+  let deck, board, tableID;
 
   // get deck from DB
   await db
     .query(
-      "SELECT deck, board FROM tables WHERE id = (SELECT table_id FROM user_table WHERE player_id = $2)",
+      "SELECT deck, board, id FROM tables WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1)",
       [userID]
     )
     .then(res => {
       deck = res.rows[0].deck;
       board = res.rows[0].board;
+      tableID = res.rows[0].id;
     });
 
   // burn one card
   deck.pop(); //Burn a card
 
+  console.log("numTurn", numTurn);
   // Deal numTurn cards to board
   for (i = 0; i < numTurn; i += 1) {
     board.push(deck.pop());
@@ -699,11 +701,11 @@ const burnTurn = async (numTurn, userID) => {
 
   // prep variable for postgres query
   board = "{" + board.join() + "}";
-
+  console.log("board", board);
   // persist remaining deck and append to board
   await db.query(
-    "UPDATE tables SET deck = $1, board= $2 WHERE id=$2 RETURNING *",
-    ["{" + deck.join() + "}", tableID]
+    "UPDATE tables SET deck = $1, board= $2 WHERE id=$3 RETURNING *",
+    ["{" + deck.join() + "}", board, tableID]
   );
 };
 
@@ -844,11 +846,12 @@ const checkForAllInPlayer = players => {
   return allInPlayer;
 };
 
-// set talked field to false
+// set talked field to false for all users on table
 const removeTalked = async userID => {
-  await db.query("UPDATE user_table SET talked = false WHERE player_id=$1", [
-    userID
-  ]);
+  await db.query(
+    "UPDATE user_table SET talked = false WHERE table_id = (SELECT table_id FROM user_table WHERE player_id = $1)",
+    [userID]
+  );
 };
 
 // set roundbet field to input

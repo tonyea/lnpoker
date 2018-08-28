@@ -789,6 +789,11 @@ describe("Game Tests", () => {
     expect(currentPlayer.playerName).toBe(players[0].playerName);
     expect(notCurrentPlayer.playerName).toBe(players[1].playerName);
 
+    // check if roundname is deal
+    await db
+      .query("SELECT roundname FROM tables")
+      .then(res => expect(res.rows[0].roundname).toBe("Deal"));
+
     // big blind checks
     await request(app)
       .post("/api/game/check")
@@ -802,18 +807,34 @@ describe("Game Tests", () => {
     expect(notCurrentPlayer.playerName).toBe(players[0].playerName);
 
     // sum of all bets match the pot amount - should be 2x big blind
+    let bigBlind;
+    await db.query("SELECT pot, bigblind FROM tables").then(res1 => {
+      bigBlind = res1.rows[0].bigblind;
+      const expectedPot = bigBlind * 2;
+      expect(res1.rows[0].pot).toBe(expectedPot);
+    });
 
-    // all bets are moved to roundBets
+    await db
+      .query("SELECT roundbet, bet, talked FROM user_table")
+      .then(res2 => {
+        // all bets are moved to roundBets - roundbets should have 1x big blind each
+        expect(res2.rows[0].roundbet).toBe(bigBlind);
+        expect(res2.rows[1].roundbet).toBe(bigBlind);
+        // // bets are all set to 0
+        expect(res2.rows[0].bet).toBe(0);
+        expect(res2.rows[1].bet).toBe(0);
+        // // all talked are set to false
+        expect(res2.rows[0].talked).toBe(false);
+        expect(res2.rows[1].talked).toBe(false);
+      });
 
-    // check if roundname is deal
-
-    // // roundname changes to flop
-
-    // // bets are all set to 0
-
-    // // burn a card and turn 3 - deck should have 4 less cards and board should have 3
-
-    // // all talked are set to false
+    await db.query("SELECT roundname, deck, board FROM tables").then(res => {
+      // roundname changes to flop
+      expect(res.rows[0].roundname).toBe("Flop");
+      // burn a card and turn 3 - deck should have 4 less cards and board should have 3
+      expect(res.rows[0].deck.length).toBe(44);
+      expect(res.rows[0].board.length).toBe(3);
+    });
 
     //--- All users check
 
