@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
-import Chat from "../chat/Chat";
 import { connect } from "react-redux";
 import * as actions from "../../actions/gameActions";
 import { getIsFetching } from "../../reducers";
@@ -43,11 +42,6 @@ class Table extends Component {
     // filter out opponents info from players to get my info
     const myInfo = players.find(player => player.username === user.name);
 
-    // listening for broadcasted messages and dispatching action when received
-    // this.state.socket.on("chat message", msgs => {
-    //   receiveMessages(msgs);
-    // });
-
     return (
       <div className="container table-container">
         <Opponents opponents={opponents} />
@@ -63,23 +57,13 @@ class Table extends Component {
 }
 
 Table.propTypes = {
-  // chatLog: PropTypes.arrayOf(
-  //   PropTypes.shape({
-  //     message: PropTypes.string.isRequired,
-  //     author: PropTypes.string.isRequired,
-  //     sendDate: PropTypes.number.isRequired
-  //   }).isRequired
-  // ),
-  // receiveMessages: PropTypes.func.isRequired,
   fetchGameData: PropTypes.func.isRequired,
-  // exitGame: PropTypes.func.isRequired,
   user: PropTypes.object.isRequired
 };
 
 const mapStateToProps = state => ({
   game: state.game,
   isFetching: getIsFetching(state),
-  // chatLog: state.chat,
   user: {
     id: state.auth.user.id,
     name: state.auth.user.username

@@ -5,7 +5,7 @@ import React from "react";
 export default props => {
   let pathToCard = convertCard(props.card);
   return (
-    <div className="col-sm card">
+    <div className="col-sm card p-2">
       <img src={"/images/cards/" + pathToCard} alt={pathToCard} />
     </div>
   );

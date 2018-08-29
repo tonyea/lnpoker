@@ -35,17 +35,17 @@ export default props => {
         </div>
       </div>
 
-      <div class="btn-group-vertical btn-group-sm player-row-buttons">
-        <button type="button" class="btn btn-outline-secondary">
+      <div className="btn-group-vertical btn-group-sm player-row-buttons">
+        <button type="button" className="btn btn-outline-secondary">
           Check
         </button>
-        <button type="button" class="btn btn-outline-primary">
+        <button type="button" className="btn btn-outline-primary">
           Call
         </button>
-        <button type="button" class="btn btn-outline-light">
+        <button type="button" className="btn btn-outline-light">
           Bet
         </button>
-        <button type="button" class="btn btn-outline-danger">
+        <button type="button" className="btn btn-outline-danger">
           Fold
         </button>
       </div>
