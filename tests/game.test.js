@@ -997,20 +997,28 @@ describe("Game Tests", () => {
       .set("Authorization", notCurrentPlayer.token)
       .send();
 
-    // verify straight flush
-
     // expect player one to win, have all chips
     await db
       .query(
-        "SELECT chips FROM user_table WHERE player_id = (SELECT id FROM users where username=$1)",
+        "SELECT chips, rankname FROM user_table WHERE player_id = (SELECT id FROM users where username=$1)",
         [currentPlayer.playerName]
       )
       .then(res => {
         const expectedChips = roundbet * 2;
         expect(res.rows[0].chips).toBe(expectedChips);
+        // verify straight flush
+        expect(res.rows[0].rankname).toBe("Straight Flush");
       });
 
     // check for bankrupt - player 2 should be bankrupt, expect him deleted from db
+    await db
+      .query(
+        "SELECT * FROM user_table WHERE player_id != (SELECT id FROM users where username=$1)",
+        [currentPlayer.playerName]
+      )
+      .then(res => {
+        expect(res.rows.length).toBe(0);
+      });
   });
 
   // table progresses from one round to next - roundname changes back to 'Deal'
