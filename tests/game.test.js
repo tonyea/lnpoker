@@ -808,25 +808,23 @@ describe("Game Tests", () => {
 
     // sum of all bets match the pot amount - should be 2x big blind
     let bigBlind;
-    await db.query("SELECT pot, bigblind FROM tables").then(res1 => {
-      bigBlind = res1.rows[0].bigblind;
+    await db.query("SELECT pot, bigblind FROM tables").then(res => {
+      bigBlind = res.rows[0].bigblind;
       const expectedPot = bigBlind * 2;
-      expect(res1.rows[0].pot).toBe(expectedPot);
+      expect(res.rows[0].pot).toBe(expectedPot);
     });
 
-    await db
-      .query("SELECT roundbet, bet, talked FROM user_table")
-      .then(res2 => {
-        // all bets are moved to roundBets - roundbets should have 1x big blind each
-        expect(res2.rows[0].roundbet).toBe(bigBlind);
-        expect(res2.rows[1].roundbet).toBe(bigBlind);
-        // // bets are all set to 0
-        expect(res2.rows[0].bet).toBe(0);
-        expect(res2.rows[1].bet).toBe(0);
-        // // all talked are set to false
-        expect(res2.rows[0].talked).toBe(false);
-        expect(res2.rows[1].talked).toBe(false);
-      });
+    await db.query("SELECT roundbet, bet, talked FROM user_table").then(res => {
+      // all bets are moved to roundBets - roundbets should have 1x big blind each
+      expect(res.rows[0].roundbet).toBe(bigBlind);
+      expect(res.rows[1].roundbet).toBe(bigBlind);
+      // // bets are all set to 0
+      expect(res.rows[0].bet).toBe(0);
+      expect(res.rows[1].bet).toBe(0);
+      // // all talked are set to false
+      expect(res.rows[0].talked).toBe(false);
+      expect(res.rows[1].talked).toBe(false);
+    });
 
     await db.query("SELECT roundname, deck, board FROM tables").then(res => {
       // roundname changes to flop
@@ -847,24 +845,22 @@ describe("Game Tests", () => {
       .set("Authorization", notCurrentPlayer.token)
       .send();
 
-    await db
-      .query("SELECT roundbet, bet, talked FROM user_table")
-      .then(res2 => {
-        // all bets are moved to roundBets - roundbets should have 1x big blind each
-        expect(res2.rows[0].roundbet).toBe(bigBlind);
-        expect(res2.rows[1].roundbet).toBe(bigBlind);
-        // // bets are all set to 0
-        expect(res2.rows[0].bet).toBe(0);
-        expect(res2.rows[1].bet).toBe(0);
-        // // all talked are set to false
-        expect(res2.rows[0].talked).toBe(false);
-        expect(res2.rows[1].talked).toBe(false);
-      });
+    await db.query("SELECT roundbet, bet, talked FROM user_table").then(res => {
+      // all bets are moved to roundBets - roundbets should have 1x big blind each
+      expect(res.rows[0].roundbet).toBe(bigBlind);
+      expect(res.rows[1].roundbet).toBe(bigBlind);
+      // // bets are all set to 0
+      expect(res.rows[0].bet).toBe(0);
+      expect(res.rows[1].bet).toBe(0);
+      // // all talked are set to false
+      expect(res.rows[0].talked).toBe(false);
+      expect(res.rows[1].talked).toBe(false);
+    });
 
     await db.query("SELECT roundname, deck, board FROM tables").then(res => {
       // roundname changes to turn
       expect(res.rows[0].roundname).toBe("Turn");
-      // burn a card and turn 1 - deck should have 2 less cards and board should have 4
+      // burn a card and turn 1 - deck should have 2 fewer cards and board should have 4
       expect(res.rows[0].deck.length).toBe(42);
       expect(res.rows[0].board.length).toBe(4);
     });
@@ -880,24 +876,22 @@ describe("Game Tests", () => {
       .set("Authorization", notCurrentPlayer.token)
       .send();
 
-    await db
-      .query("SELECT roundbet, bet, talked FROM user_table")
-      .then(res2 => {
-        // all bets are moved to roundBets - roundbets should have 1x big blind each
-        expect(res2.rows[0].roundbet).toBe(bigBlind);
-        expect(res2.rows[1].roundbet).toBe(bigBlind);
-        // // bets are all set to 0
-        expect(res2.rows[0].bet).toBe(0);
-        expect(res2.rows[1].bet).toBe(0);
-        // // all talked are set to false
-        expect(res2.rows[0].talked).toBe(false);
-        expect(res2.rows[1].talked).toBe(false);
-      });
+    await db.query("SELECT roundbet, bet, talked FROM user_table").then(res => {
+      // all bets are moved to roundBets - roundbets should have 1x big blind each
+      expect(res.rows[0].roundbet).toBe(bigBlind);
+      expect(res.rows[1].roundbet).toBe(bigBlind);
+      // // bets are all set to 0
+      expect(res.rows[0].bet).toBe(0);
+      expect(res.rows[1].bet).toBe(0);
+      // // all talked are set to false
+      expect(res.rows[0].talked).toBe(false);
+      expect(res.rows[1].talked).toBe(false);
+    });
 
     await db.query("SELECT roundname, deck, board FROM tables").then(res => {
-      // roundname changes to turn
+      // roundname changes to River
       expect(res.rows[0].roundname).toBe("River");
-      // // burn a card and turn 1 - deck should have 2 less cards and board should have 5
+      // // burn a card and turn 1 - deck should have 2 fewer cards and board should have 5
       expect(res.rows[0].deck.length).toBe(40);
       expect(res.rows[0].board.length).toBe(5);
     });
@@ -913,35 +907,133 @@ describe("Game Tests", () => {
       .set("Authorization", notCurrentPlayer.token)
       .send();
 
-    await db
-      .query("SELECT roundbet, bet, talked FROM user_table")
-      .then(res2 => {
-        // at end of showdown roundbets are 0
-        expect(res2.rows[0].roundbet).toBe(0);
-        expect(res2.rows[1].roundbet).toBe(0);
-        // // bets are all set to 0
-        expect(res2.rows[0].bet).toBe(0);
-        expect(res2.rows[1].bet).toBe(0);
-      });
-
-    await db.query("SELECT roundname FROM tables").then(res => {
-      // roundname changes to showdown
-      expect(res.rows[0].roundname).toBe("Showdown");
+    await db.query("SELECT roundbet, bet, talked FROM user_table").then(res => {
+      // at end of showdown roundbets are 0
+      expect(res.rows[0].roundbet).toBe(0);
+      expect(res.rows[1].roundbet).toBe(0);
+      // // bets are all set to 0
+      expect(res.rows[0].bet).toBe(0);
+      expect(res.rows[1].bet).toBe(0);
     });
 
-    // // winner is decided
-    // pot is 0
-    // sum(chips should be original)
+    await db.query("SELECT roundname, pot FROM tables").then(res => {
+      // roundname changes to showdown
+      expect(res.rows[0].roundname).toBe("Showdown");
+      // pot is 0
+      expect(res.rows[0].pot).toBe(0);
+    });
   });
 
-  // check for bankrupt
+  // test certain losing hand against certain winning hand
+  test("Game winner and loser testing", async () => {
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+    // set current and non-current players
+    await setCurrentPlayer();
+    // sb calls
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Deal' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+    // 'Flop' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Flop' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+    // 'Turn' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Turn' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // winner is decided - set player one with straight, player 2 with pair. expect player one to win, have all chips
+    await db.query(
+      `
+      UPDATE tables SET board = '{8C,6H,7C,JC,6C}'
+      WHERE id = (SELECT table_id FROM user_table where player_id = (SELECT id FROM users where username=$1))
+      RETURNING *
+      `,
+      [currentPlayer.playerName]
+    );
+    // .then(res => {
+    //   console.log(res.rows[0]);
+    // });
+    let roundbet;
+    await db
+      .query(
+        "UPDATE user_table SET cards = '{9C, TC}', chips=0 WHERE player_id = (SELECT id FROM users where username=$1) returning roundbet",
+        [currentPlayer.playerName]
+      )
+      .then(res => (roundbet = res.rows[0].roundbet));
+
+    await db.query(
+      "UPDATE user_table SET cards = '{4H, KS}', chips=0 WHERE player_id = (SELECT id FROM users where username=$1)",
+      [notCurrentPlayer.playerName]
+    );
+
+    // 'River' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'River' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // verify straight flush
+
+    // expect player one to win, have all chips
+    await db
+      .query(
+        "SELECT chips FROM user_table WHERE player_id = (SELECT id FROM users where username=$1)",
+        [currentPlayer.playerName]
+      )
+      .then(res => {
+        const expectedChips = roundbet * 2;
+        expect(res.rows[0].chips).toBe(expectedChips);
+      });
+
+    // check for bankrupt - player 2 should be bankrupt, expect him deleted from db
+  });
+
+  // table progresses from one round to next - roundname changes back to 'Deal'
+
+  // test all in player against part in - same as above but player 2 has less than max bet
+  // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
 
   // new round initiation
 
-  // test certain losing hand against certain winning hand
-
-  // test all player against part in
-  // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
-
-  // test tie round
+  // test tie breaker - https://www.adda52.com/poker/poker-rules/cash-game-rules/tie-breaker-rules
+  // two royal flushes - slpit pot
+  // Two king high straight flush - split pot
+  // A King High Straight Flush loses only to a Royal
+  // A queen high Straight Flush beats a jack high
+  // Both players share 4 of a kind of aces, winner is based on higher kicker. p1 has king kicker, p2 has q, p1 wins.
+  // Both players share 4 of a kind of aces, winner is based on higher kicker. p1 and p2 have king kickers, split pot.
+  // Aces full of deuces (AAA22) beats Kings full of Jacks (KKKJJ)
+  // Aces full of deuces (AAA22) loses Aces full of Jacks (AAAJJ)
+  // Aces full of deuces (AAA22) split pot with Aces full of deuces (AAA22)
+  // A flush is any hand with five cards of the same suit. If two or more players hold a flush, the flush with the highest card wins. If more than one player has the same strength high card, then the strength of the second highest card held wins. This continues through the five highest cards in the player's hands
+  // A straight is any five cards in sequence, but not necessarily of the same suit. If more than one player has a straight, the straight ending in the card wins. If both straights end in a card of the same strength, the hand is tied
+  // If more than one player holds three of a kind, then the higher value of the cards used to make the three of kind determines the winner. If two or more players have the same three of a kind, then a fourth card (and a fifth if necessary) can be used as kickers to determine the winner.
+  // The highest pair is used to determine the winner. If two or more players have the same highest pair, then the highest of the second pair determines the winner. If both players hold identical two pairs, fifth card is used to break the tie.
+  // If two or more players hold a single pair, then highest pair wins. If the pairs are of the same value, the highest kicker card determines the winner. A second and even third kicker can be used if necessary.
+  // When no player has even a pair, then the highest card wins. When both players have identical high cards, the next highest card wins, and so on until five cards have been used. In the unusual circumstance that two players hold the identical five cards, the pot would be split.
 });

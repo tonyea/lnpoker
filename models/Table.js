@@ -591,7 +591,7 @@ const call = async (userID, cb) => {
   }
 };
 
-const progress = async userID => {
+const getGame = async userID => {
   const res = await db.query(
     `
     SELECT user_table.id as id, currentplayer, bet, cards, player_id, table_id, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
@@ -599,18 +599,23 @@ const progress = async userID => {
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
     WHERE table_id = (SELECT table_id 
-                      FROM user_table
-                      WHERE player_id = $1)
-    ORDER BY user_table.id;
-    `,
+      FROM user_table
+      WHERE player_id = $1)
+      ORDER BY user_table.id;
+      `,
     [userID]
   );
 
-  const status = res.rows[0].status;
-  const roundname = res.rows[0].roundname;
-  const board = res.rows[0].board;
-  const tableID = res.rows[0].table_id;
-  const userTable = res.rows;
+  return res.rows;
+};
+
+const progress = async userID => {
+  const userTable = await getGame(userID);
+
+  const status = userTable[0].status;
+  const roundname = userTable[0].roundname;
+  const board = userTable[0].board;
+  const tableID = userTable[0].table_id;
   // if status of game is started then progress, else null
   if (status === "started") {
     // only progress game if it is end of round
@@ -631,14 +636,14 @@ const progress = async userID => {
       await moveAllBetsToPot(userID);
 
       if (roundname === "River") {
-        setRoundName("Showdown", userID);
+        await setRoundName("Showdown", userID);
         //Evaluate each hand
         for (let j = 0; j < userTable.length; j += 1) {
           let cards = userTable[j].cards.concat(board);
-          let hand = await rankHand({ cards });
+          let hand = rankHand({ cards });
           await setRank(userTable[j].player_id, hand);
         }
-        await checkForWinner(userTable);
+        await checkForWinner(userID);
         await checkForBankrupt(userID);
       } else if (roundname === "Turn") {
         await setRoundName("River", userID);
@@ -715,21 +720,36 @@ const setRank = async (userID, hand) => {
   );
 };
 
-const checkForWinner = async players => {
+const checkForWinner = async userID => {
   let i, j, k, l, maxRank, winners, part, prize, allInPlayer, minBets, roundEnd;
+
+  const players = await getGame(userID);
 
   //Identify winner(s)
   winners = [];
   maxRank = 0.0;
   for (k = 0; k < players.length; k += 1) {
     const rank = parseFloat(players[k].rank);
+    console.log(
+      "rank",
+      rank,
+      "maxrank",
+      maxRank,
+      "players[k].lastaction",
+      players[k].lastaction,
+      "players[k].player_id",
+      players[k].player_id
+    );
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
     if (rank === maxRank && players[k].lastaction !== "fold") {
+      console.log("maxRank 1 ", maxRank);
       winners.push(players[k]);
     }
     if (rank > maxRank && players[k].lastaction !== "fold") {
       // start by setting the first player's rank to the max rank
+      console.log("maxRank 2 ", maxRank);
       maxRank = rank;
+      console.log("maxRank 3 ", maxRank);
       // reset winners array to 0
       winners.splice(0, winners.length);
       // push the first player to the winners array
@@ -759,11 +779,11 @@ const checkForWinner = async players => {
     if (players[l].roundbet > part) {
       prize += part;
       const lostAmount = players[l].roundbet - part;
-      setRoundBet(players[l].player_id, lostAmount);
+      await setRoundBet(players[l].player_id, lostAmount);
       players[l].roundbet = lostAmount;
     } else {
       prize += players[l].roundbet;
-      setRoundBet(players[l].player_id, 0);
+      await setRoundBet(players[l].player_id, 0);
       players[l].roundbet = 0;
     }
   }
@@ -772,9 +792,9 @@ const checkForWinner = async players => {
   for (i = 0; i < winners.length; i += 1) {
     let winnerPrize = parseFloat(prize / winners.length);
     let winningPlayer = winners[i];
-    setChipsAndPot(winningPlayer.player_id, winnerPrize);
+    await setChipsAndPot(winningPlayer.player_id, winnerPrize);
     if (winners[i].roundbet === 0) {
-      setLastAction(winningPlayer.player_id, "fold");
+      await setLastAction(winningPlayer.player_id, "fold");
     }
     // send message about winner
     console.log({
@@ -794,7 +814,7 @@ const checkForWinner = async players => {
     }
   }
   if (roundEnd === false) {
-    checkForWinner(players);
+    await checkForWinner(userID);
   }
 };
 
