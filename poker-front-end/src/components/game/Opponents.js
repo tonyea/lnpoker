@@ -18,7 +18,12 @@ const Opponents = props => {
     return <div>No Players have joined</div>;
   }
 
-  return <div className="row opponents-row">{playerRows}</div>;
+  return (
+    <div className="row opponents-row">
+      <div className="opponents-row-title">Players</div>
+      {playerRows}
+    </div>
+  );
 };
 
 Opponents.propTypes = {

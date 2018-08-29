@@ -21,17 +21,38 @@ export default props => {
 
   return (
     <div className="row player-row">
-      <div className="col-sm">
-        <h3>{username}</h3>
-        <p>
-          Chips:
-          {chips}
-        </p>
-        {dealer ? <div>Dealer</div> : null}
-        {currentplayer ? <div>My Turn</div> : <div>Waiting</div>}
-        {bet > 0 ? <div>Bet: {bet}</div> : null}
+      <div className="col-sm-12 col-md-6 text-sm-center player-row-info order-sm-3">
+        <div className="card text-center">
+          <div className="card-header">{username}</div>
+          <div className="card-body">
+            <h5 className="card-title">
+              {currentplayer ? <div>My Turn</div> : <div>Waiting</div>}
+            </h5>
+            {dealer ? <p className="card-text">Dealer</p> : null}
+            {bet > 0 ? <p className="card-text">Bet: {bet}</p> : null}
+          </div>
+          <div className="card-footer text-muted">{chips} Sats</div>
+        </div>
       </div>
-      <div className="col-sm card-row row">{cardRows}</div>
+
+      <div class="btn-group-vertical btn-group-sm player-row-buttons">
+        <button type="button" class="btn btn-outline-secondary">
+          Check
+        </button>
+        <button type="button" class="btn btn-outline-primary">
+          Call
+        </button>
+        <button type="button" class="btn btn-outline-light">
+          Bet
+        </button>
+        <button type="button" class="btn btn-outline-danger">
+          Fold
+        </button>
+      </div>
+
+      <div className="col-sm-12 col-md-6 player-row-card row order-sm-2">
+        {cardRows}
+      </div>
     </div>
   );
 };

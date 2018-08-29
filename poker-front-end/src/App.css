@@ -1,5 +1,10 @@
-.table-container {
-  border: 2px solid red;
+body {
+  font-family: lato;
+}
+
+.main-window {
+  background-color: #343a40;
+  padding-bottom: 10%;
 }
 
 .card img {
@@ -10,13 +15,55 @@
 }
 
 .opponents-row {
-  border: 2px solid peru;
+  justify-content: space-between;
+  align-items: center;
+  background: #556b2fad;
+}
+.opponents-row-title {
+  font-size: 2rem;
+  text-align: center;
+  display: block;
+  color: #6c757d;
+  left: 0;
+  transform: rotate(-90deg);
 }
 .opponents-row > div {
-  border: 2px solid black;
+  max-width: 200px;
 }
 
 .deck-row {
-  min-height: 100px;
   background-color: darkolivegreen;
+  justify-content: space-between;
+  min-height: 250px;
+  align-items: center;
+}
+
+.deck-row-title {
+  max-width: 200px;
+  font-size: 0.8rem;
+  color: white;
+}
+
+.player-row {
+  align-items: center;
+  background: #556b2fad;
+  color: darkolivegreen;
+  justify-content: space-evenly;
+}
+.player-row-info {
+  max-width: 200px;
+}
+.player-row-card {
+  max-width: 36%;
+}
+
+.player-row-card .card:first-child {
+  margin-right: 10px;
+}
+
+.player-row-buttons {
+  min-width: 100px;
+}
+.player-row-buttons > button {
+  margin-bottom: 10px;
 }

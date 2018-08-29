@@ -6,18 +6,7 @@ const Board = props => {
   //   return <Card card={cardType} key={key} className="col-sm" />;
   // }
 
-  const {
-    smallblind,
-    bigblind,
-    minplayers,
-    maxplayers,
-    minbuyin,
-    maxbuyin,
-    pot,
-    roundname,
-    betname,
-    status
-  } = props;
+  const { id, smallblind, bigblind, pot } = props;
   // const cardRows = [];
   // for (const key in this.state) {
   //   const element = this.state[key];
@@ -26,25 +15,13 @@ const Board = props => {
 
   return (
     <div className="row deck-row">
-      {/* {cardRows} */}
-      <div className="row history-row col-sm">
-        <div className="col-sm">
-          Round Info
-          <div>Pot: {pot}</div>
-          <div>Round Name: {roundname}</div>
-          <div>Bet Name: {betname}</div>
-          <div>Status: {status}</div>
-        </div>
-        <div className="col-sm">
-          Game Info
-          <div>Small Blind: {smallblind}</div>
-          <div>Big Blind: {bigblind}</div>
-          <div>Min Players: {minplayers}</div>
-          <div>Max Players: {maxplayers}</div>
-          <div>Min Buy In: {minbuyin}</div>
-          <div>Max Buy In: {maxbuyin}</div>
-        </div>
+      <div className="deck-row-title p-2">
+        Game # {id}
+        <div>Pot: {pot} Sats</div>
+        <div>Small Blind: {smallblind} Sats</div>
+        <div>Big Blind: {bigblind} Sats</div>
       </div>
+      {/* {cardRows} */}
     </div>
   );
 };

@@ -30,7 +30,7 @@ class Table extends Component {
     // this.props.exitGame();
   }
   render() {
-    const { chatLog, receiveMessages, user } = this.props;
+    const { user } = this.props;
     const { players, isFetching, ...rest } = this.props.game;
 
     // loading indicator
@@ -44,9 +44,9 @@ class Table extends Component {
     const myInfo = players.find(player => player.username === user.name);
 
     // listening for broadcasted messages and dispatching action when received
-    this.state.socket.on("chat message", msgs => {
-      receiveMessages(msgs);
-    });
+    // this.state.socket.on("chat message", msgs => {
+    //   receiveMessages(msgs);
+    // });
 
     return (
       <div className="container table-container">
@@ -56,21 +56,21 @@ class Table extends Component {
 
         <Player myInfo={myInfo} />
 
-        <Chat socket={this.state.socket} chatLog={chatLog} />
+        {/* <Chat socket={this.state.socket} chatLog={chatLog} /> */}
       </div>
     );
   }
 }
 
 Table.propTypes = {
-  chatLog: PropTypes.arrayOf(
-    PropTypes.shape({
-      message: PropTypes.string.isRequired,
-      author: PropTypes.string.isRequired,
-      sendDate: PropTypes.number.isRequired
-    }).isRequired
-  ),
-  receiveMessages: PropTypes.func.isRequired,
+  // chatLog: PropTypes.arrayOf(
+  //   PropTypes.shape({
+  //     message: PropTypes.string.isRequired,
+  //     author: PropTypes.string.isRequired,
+  //     sendDate: PropTypes.number.isRequired
+  //   }).isRequired
+  // ),
+  // receiveMessages: PropTypes.func.isRequired,
   fetchGameData: PropTypes.func.isRequired,
   // exitGame: PropTypes.func.isRequired,
   user: PropTypes.object.isRequired
@@ -79,7 +79,7 @@ Table.propTypes = {
 const mapStateToProps = state => ({
   game: state.game,
   isFetching: getIsFetching(state),
-  chatLog: state.chat,
+  // chatLog: state.chat,
   user: {
     id: state.auth.user.id,
     name: state.auth.user.username
