@@ -33,7 +33,7 @@ body {
 
 .deck-row {
   background-color: darkolivegreen;
-  justify-content: space-between;
+  justify-content: space-around;
   min-height: 250px;
   align-items: center;
 }
@@ -45,6 +45,7 @@ body {
 }
 
 .deck-row > .card {
+  max-width: 100px;
   margin-right: 10px;
 }
 
@@ -57,8 +58,8 @@ body {
 .player-row-info {
   max-width: 200px;
 }
-.player-row-card {
-  max-width: 36%;
+.player-row-card .card {
+  max-width: 100px;
 }
 
 .player-row-card .card:first-child {
@@ -67,7 +68,39 @@ body {
 
 .player-row-buttons {
   min-width: 100px;
+  margin: 20px 0 20px 0;
 }
 .player-row-buttons > button {
   margin-bottom: 10px;
+}
+
+/* Slider */
+.bet-slider__range {
+  height: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 3px #fff;
+}
+
+.bet-slider__range:hover {
+  background: #1abc9c;
+}
+
+.bet-slider__range:active {
+  background: #1abc9c;
+}
+
+/* Focus state */
+.bet-slider__range:focus {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #1abc9c;
+}
+
+/* Range Label */
+.bet-slider__value {
+  width: 60px;
+  color: #fff;
+  text-align: center;
+  border-radius: 3px;
+  background: #2c3e50;
+  padding: 5px 10px;
+  margin-left: 8px;
 }

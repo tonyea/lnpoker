@@ -9,6 +9,8 @@ const init = app => {
   const io = require("socket.io")(http);
   // const gameEvents = require("./event_handlers/game_handler");
 
+  app.set("socketio", io);
+
   let userNum = 0;
   // let activePlayers = [];
   io.on("connection", client => {

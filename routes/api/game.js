@@ -41,14 +41,18 @@ router.post(
   "/check",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or table object
+    // callback function that returns error or emit's success response to socket clients
     const returnResult = (errors, resultFromCaller = {}) => {
+      const io = req.app.get("socketio");
       if (errors) {
         // console.log("errors", errors);
         res.status(400);
         return res.json(errors);
       }
-      // console.log("resultFromCaller", resultFromCaller);
+      // emit a status update to all players at the table that the table has changed. it will also return the response as is
+      if (resultFromCaller === "Success") {
+        io.emit("table updated");
+      }
       return res.json(resultFromCaller);
     };
     // check if it is player's turn
@@ -63,14 +67,18 @@ router.post(
   "/fold",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or table object
+    // callback function that returns error or emit's success response to socket clients
     const returnResult = (errors, resultFromCaller = {}) => {
+      const io = req.app.get("socketio");
       if (errors) {
         // console.log("errors", errors);
         res.status(400);
         return res.json(errors);
       }
-      // console.log("resultFromCaller", resultFromCaller);
+      // emit a status update to all players at the table that the table has changed. it will also return the response as is
+      if (resultFromCaller === "Success") {
+        io.emit("table updated");
+      }
       return res.json(resultFromCaller);
     };
     // fold if it is player's turn
@@ -85,14 +93,18 @@ router.post(
   "/bet/:amount",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or table object
+    // callback function that returns error or emit's success response to socket clients
     const returnResult = (errors, resultFromCaller = {}) => {
+      const io = req.app.get("socketio");
       if (errors) {
         // console.log("errors", errors);
         res.status(400);
         return res.json(errors);
       }
-      // console.log("resultFromCaller", resultFromCaller);
+      // emit a status update to all players at the table that the table has changed. it will also return the response as is
+      if (resultFromCaller === "Success") {
+        io.emit("table updated");
+      }
       return res.json(resultFromCaller);
     };
     // bet if it is player's turn
@@ -104,16 +116,21 @@ router.post(
   "/call",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or table object
+    // callback function that returns error or emit's success response to socket clients
     const returnResult = (errors, resultFromCaller = {}) => {
+      const io = req.app.get("socketio");
       if (errors) {
         // console.log("errors", errors);
         res.status(400);
         return res.json(errors);
       }
-      // console.log("resultFromCaller", resultFromCaller);
+      // emit a status update to all players at the table that the table has changed. it will also return the response as is
+      if (resultFromCaller === "Success") {
+        io.emit("table updated");
+      }
       return res.json(resultFromCaller);
     };
+
     // call if it is player's turn
     call(req.user.id, returnResult);
   }

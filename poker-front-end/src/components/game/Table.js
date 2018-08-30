@@ -29,6 +29,8 @@ class Table extends Component {
     // this.props.exitGame();
   }
   render() {
+    this.state.socket.on("table updated", () => this.props.fetchGameData());
+
     const { user } = this.props;
     const { players, isFetching, ...rest } = this.props.game;
 

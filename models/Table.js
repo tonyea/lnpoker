@@ -742,14 +742,14 @@ const checkForWinner = async userID => {
     );
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
     if (rank === maxRank && players[k].lastaction !== "fold") {
-      console.log("maxRank 1 ", maxRank);
+      // console.log("maxRank 1 ", maxRank);
       winners.push(players[k]);
     }
     if (rank > maxRank && players[k].lastaction !== "fold") {
       // start by setting the first player's rank to the max rank
-      console.log("maxRank 2 ", maxRank);
+      // console.log("maxRank 2 ", maxRank);
       maxRank = rank;
-      console.log("maxRank 3 ", maxRank);
+      // console.log("maxRank 3 ", maxRank);
       // reset winners array to 0
       winners.splice(0, winners.length);
       // push the first player to the winners array
