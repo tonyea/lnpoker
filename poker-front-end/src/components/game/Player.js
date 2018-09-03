@@ -45,7 +45,9 @@ export default class Player extends PureComponent {
       dealer,
       username,
       bet,
-      currentplayer
+      currentplayer,
+      isSmallBlind,
+      isBigBlind
     } = this.props.myInfo;
 
     // console.log("cards", props.myInfo);
@@ -65,14 +67,30 @@ export default class Player extends PureComponent {
 
     return (
       <div className="row player-row">
-        <div className="col-sm-12 col-md-3 text-sm-center player-row-info order-sm-3">
+        <div
+          className={
+            currentplayer
+              ? "col-sm-12 col-md-3 text-sm-center player-row-info order-sm-3 current-player"
+              : "col-sm-12 col-md-3 text-sm-center player-row-info order-sm-3"
+          }
+        >
           <div className="card text-center">
             <div className="card-header">{username}</div>
             <div className="card-body">
               <h5 className="card-title">
                 {currentplayer ? <div>My Turn</div> : <div>Waiting</div>}
               </h5>
-              {dealer ? <p className="card-text">Dealer</p> : null}
+              <div className="tokens row mb-2">
+                {dealer ? <div className="card-text tokens-d">D</div> : null}
+
+                {isSmallBlind ? (
+                  <div className="card-text tokens-sb">SB</div>
+                ) : null}
+
+                {isBigBlind ? (
+                  <div className="card-text tokens-bb">BB</div>
+                ) : null}
+              </div>
               {bet > 0 ? <p className="card-text">Bet: {bet}</p> : null}
             </div>
             <div className="card-footer text-muted">{chips} Sats</div>

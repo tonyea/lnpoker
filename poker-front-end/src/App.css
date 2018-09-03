@@ -146,3 +146,67 @@ body {
   padding: 5px 10px;
   margin-left: 8px;
 }
+
+.tokens {
+  justify-content: space-around;
+}
+.tokens-d,
+.tokens-bb,
+.tokens-sb {
+  border: 1px solid;
+  border-radius: 50%;
+  width: 24px;
+}
+
+.tokens-bb {
+  border: 1px solid red;
+  color: white;
+  background-color: red;
+}
+.tokens-sb {
+  border: 1px solid darkkhaki;
+  color: white;
+  background-color: darkkhaki;
+}
+
+.current-player {
+  animation: animationFrames linear 4s;
+  animation-iteration-count: infinite;
+  transform-origin: 50% 50%;
+  -webkit-animation: animationFrames linear 4s;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-transform-origin: 50% 50%;
+  -moz-animation: animationFrames linear 4s;
+  -moz-animation-iteration-count: infinite;
+  -moz-transform-origin: 50% 50%;
+  -o-animation: animationFrames linear 4s;
+  -o-animation-iteration-count: infinite;
+  -o-transform-origin: 50% 50%;
+  -ms-animation: animationFrames linear 4s;
+  -ms-animation-iteration-count: infinite;
+  -ms-transform-origin: 50% 50%;
+}
+
+@keyframes animationFrames {
+  0% {
+    transform: translate(0px, 0px);
+  }
+  15% {
+    transform: translate(0px, -25px);
+  }
+  30% {
+    transform: translate(0px, 0px);
+  }
+  45% {
+    transform: translate(0px, -15px);
+  }
+  60% {
+    transform: translate(0px, 0px);
+  }
+  75% {
+    transform: translate(0px, -5px);
+  }
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
