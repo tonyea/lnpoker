@@ -1,8 +1,8 @@
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import Card from "./Card";
 import axios from "axios";
 
-export default class Player extends Component {
+export default class Player extends PureComponent {
   constructor(props) {
     super(props);
 

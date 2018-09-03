@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { PureComponent } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
@@ -10,18 +10,19 @@ import PropTypes from "prop-types";
 // socket
 import io from "socket.io-client";
 
-class Table extends Component {
+class Table extends PureComponent {
   constructor(props) {
     super(props);
 
     this.state = {
-      socket: io("http://localhost:8010/")
+      socket: io("http://localhost:8010/game")
     };
   }
 
   componentDidMount() {
     // Set state of game when table is mounted
     this.props.fetchGameData();
+    this.state.socket.on("table updated", () => this.props.fetchGameData());
   }
 
   componentWillUnmount() {
@@ -29,7 +30,7 @@ class Table extends Component {
     // this.props.exitGame();
   }
   render() {
-    this.state.socket.on("table updated", () => this.props.fetchGameData());
+    console.log("rendered");
 
     const { user } = this.props;
     const { players, isFetching, ...rest } = this.props.game;

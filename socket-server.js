@@ -13,7 +13,8 @@ const init = app => {
 
   let userNum = 0;
   // let activePlayers = [];
-  io.on("connection", client => {
+  io.of("/game").on("connection", client => {
+    client.join("test room");
     userNum++;
     console.log("a user connected", userNum);
     // console.log("activePlayers when a user connects 3", activePlayers);
