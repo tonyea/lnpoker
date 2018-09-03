@@ -713,17 +713,6 @@ describe("Game Tests", () => {
 
     const maxBet = parseInt(res.rows[0].max);
 
-    // get bet amount prior to betting
-    let totalChips = 0;
-    await db
-      .query(
-        `SELECT chips, bet FROM user_table where player_id = (select id from users where username = $1)`,
-        [currentPlayer.playerName]
-      )
-      .then(dbRes => {
-        totalChips = parseInt(dbRes.rows[0].chips);
-      });
-
     const lessThanMax = maxBet - 10;
     //set current bet to 0 and chips to less than max to test bet matching - all in
     await db.query(

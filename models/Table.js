@@ -104,9 +104,14 @@ const joinTable = async (tableID, userID) => {
 // @return array
 // @desc return array of users found on table
 const getPlayersAtTable = async (tableID, userID) => {
+  // show opponents cards if showdown, else show null in opponents card
+  let isShowdown = await db
+    .query("SELECT roundname FROM tables where id = $1", [tableID])
+    .then(res => res.rows[0].roundname === "Showdown");
+
   const players = await db.query(
     `
-    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, null as cards
+    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, (CASE WHEN ($3 IS TRUE) THEN cards ELSE null END) as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
@@ -115,7 +120,7 @@ const getPlayersAtTable = async (tableID, userID) => {
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id=$2`,
-    [tableID, userID]
+    [tableID, userID, isShowdown]
   );
 
   const playersArray = players.rows;
