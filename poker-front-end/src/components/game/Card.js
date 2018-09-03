@@ -6,7 +6,12 @@ export default props => {
   let pathToCard = convertCard(props.card);
   return (
     <div className="col-sm card p-2">
-      <img src={"/images/cards/" + pathToCard} alt={pathToCard} />
+      <div className="card-content">
+        <div className="card-content-front">
+          <img src={"/images/cards/" + pathToCard} alt={pathToCard} />
+        </div>
+        <div className="card-content-back" />
+      </div>
     </div>
   );
 };

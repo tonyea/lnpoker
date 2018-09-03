@@ -58,6 +58,8 @@ body {
 .player-row-info {
   max-width: 200px;
 }
+
+/* Card Styling Begin */
 .player-row-card .card {
   max-width: 100px;
 }
@@ -65,6 +67,46 @@ body {
 .player-row-card .card:first-child {
   margin-right: 10px;
 }
+
+.card-content {
+  transition: transform 1s;
+  transform-style: preserve-3d;
+}
+
+.card:hover .card-content {
+  transform: rotateY(180deg);
+  transition: transform 0.5s;
+}
+
+.card-content-back {
+  position: absolute;
+  top: 0;
+  transform: rotateY(180deg);
+  background-color: papayawhip;
+  height: 100%;
+  width: 100%;
+}
+
+.card-content-back,
+.card-content-front {
+  backface-visibility: hidden;
+}
+
+/* .card:hover .card-content .card-content-back {
+  display: block;
+}
+.card:hover .card-content .card-content-front {
+  display: none;
+  transition: display 0.5s;
+}
+
+
+.card-content-back {
+  transform: rotateY(180deg);
+  display: none;
+} */
+
+/* Card Styling End */
 
 .player-row-buttons {
   min-width: 100px;
