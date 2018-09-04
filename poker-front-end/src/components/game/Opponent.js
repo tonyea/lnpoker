@@ -1,10 +1,10 @@
 import React from "react";
 import Card from "./Card";
 
-export default ({ playerInfo }) => (
+export default ({ playerInfo, roundname }) => (
   <div
     className={
-      playerInfo.currentplayer
+      playerInfo.currentplayer && roundname !== "Showdown"
         ? "col-sm text-sm-center current-player"
         : "col-sm text-sm-center"
     }
@@ -13,7 +13,11 @@ export default ({ playerInfo }) => (
       <div className="card-header">{playerInfo.username}</div>
       <div className="card-body">
         <h5 className="card-title">
-          {playerInfo.currentplayer ? <div>Thinking</div> : <div>Waiting</div>}
+          {playerInfo.currentplayer && roundname !== "Showdown" ? (
+            <div>Thinking</div>
+          ) : (
+            <div>Waiting</div>
+          )}
         </h5>
         <div className="tokens row mb-2">
           {playerInfo.dealer ? (

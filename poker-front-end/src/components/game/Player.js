@@ -47,9 +47,10 @@ export default class Player extends PureComponent {
       bet,
       currentplayer,
       isSmallBlind,
-      isBigBlind,
-      roundname
+      isBigBlind
     } = this.props.myInfo;
+
+    const { roundname } = this.props;
 
     // console.log("cards", props.myInfo);
     const renderCard = (cardInfo, cardKey) => {
@@ -70,7 +71,7 @@ export default class Player extends PureComponent {
       <div className="row player-row">
         <div
           className={
-            currentplayer
+            currentplayer && roundname !== "Showdown"
               ? "col-sm-12 col-md-3 text-sm-center player-row-info order-sm-3 current-player"
               : "col-sm-12 col-md-3 text-sm-center player-row-info order-sm-3"
           }
@@ -79,7 +80,12 @@ export default class Player extends PureComponent {
             <div className="card-header">{username}</div>
             <div className="card-body">
               <h5 className="card-title">
-                {currentplayer ? <div>My Turn</div> : <div>Waiting</div>}
+                {console.log("roundname", roundname)}
+                {currentplayer && roundname !== "Showdown" ? (
+                  <div>My Turn</div>
+                ) : (
+                  <div>Waiting</div>
+                )}
               </h5>
               <div className="tokens row mb-2">
                 {dealer ? <div className="card-text tokens-d">D</div> : null}
@@ -103,7 +109,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-secondary"
             onClick={this.checkGame}
-            disabled={!currentplayer || roundname !== "Showdown"}
+            disabled={!currentplayer || roundname === "Showdown"}
           >
             Check
           </button>
@@ -111,7 +117,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-primary"
             onClick={this.callGame}
-            disabled={!currentplayer || roundname !== "Showdown"}
+            disabled={!currentplayer || roundname === "Showdown"}
           >
             Call
           </button>
@@ -119,7 +125,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-danger"
             onClick={this.foldGame}
-            disabled={!currentplayer || roundname !== "Showdown"}
+            disabled={!currentplayer || roundname === "Showdown"}
           >
             Fold
           </button>
@@ -127,7 +133,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-light"
             onClick={this.betGame}
-            disabled={!currentplayer || roundname !== "Showdown"}
+            disabled={!currentplayer || roundname === "Showdown"}
           >
             Bet
           </button>
@@ -140,7 +146,7 @@ export default class Player extends PureComponent {
               max={chips}
               step="1"
               onChange={this.handleChange}
-              disabled={!currentplayer || roundname !== "Showdown"}
+              disabled={!currentplayer || roundname === "Showdown"}
             />
             <span className="bet-slider__value">
               {this.state.betAmount} Sats

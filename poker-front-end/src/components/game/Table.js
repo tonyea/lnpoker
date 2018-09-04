@@ -43,7 +43,7 @@ class Table extends PureComponent {
     console.log("rendered");
 
     const { user } = this.props;
-    const { players, isFetching, ...rest } = this.props.game;
+    const { players, isFetching, roundname, ...rest } = this.props.game;
 
     // loading indicator
     if (isFetching || !rest.smallblind) {
@@ -57,11 +57,11 @@ class Table extends PureComponent {
 
     return (
       <div className="container table-container">
-        <Opponents opponents={opponents} />
+        <Opponents opponents={opponents} roundname={roundname} />
 
         <Board {...rest} roundMessage={this.state.roundmessage} />
 
-        <Player myInfo={myInfo} />
+        <Player myInfo={myInfo} roundname={roundname} />
 
         {/* <Chat socket={this.state.socket} chatLog={chatLog} /> */}
       </div>
