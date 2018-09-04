@@ -41,33 +41,8 @@ router.post(
   "/check",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or emit's success response to socket clients
-    const returnResult = (errors, resultFromCaller = {}) => {
-      const io = req.app.get("socketio");
-      if (errors) {
-        // console.log("errors", errors);
-        res.status(400);
-        return res.json(errors);
-      }
-      // emit a status update to all players at the table that the table has changed. it will also return the response as is
-      if (resultFromCaller === "Success") {
-        io.of("/game")
-          .in("testroom")
-          .emit("table updated");
-      }
-      // if round message received emit to table
-      if (
-        resultFromCaller.winner !== null ||
-        resultFromCaller.bankrupt !== null
-      ) {
-        io.of("/game")
-          .in("testroom")
-          .emit("round message", resultFromCaller);
-      }
-      return res.json(resultFromCaller);
-    };
     // check if it is player's turn
-    check(req.user.id, returnResult);
+    check(req.user.id, returnResult(req, res));
   }
 );
 
@@ -78,33 +53,8 @@ router.post(
   "/fold",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or emit's success response to socket clients
-    const returnResult = (errors, resultFromCaller = {}) => {
-      const io = req.app.get("socketio");
-      if (errors) {
-        // console.log("errors", errors);
-        res.status(400);
-        return res.json(errors);
-      }
-      // emit a status update to all players at the table that the table has changed. it will also return the response as is
-      if (resultFromCaller === "Success") {
-        io.of("/game")
-          .in("testroom")
-          .emit("table updated");
-      }
-      // if round message received emit to table
-      if (
-        resultFromCaller.winner !== null ||
-        resultFromCaller.bankrupt !== null
-      ) {
-        io.of("/game")
-          .in("testroom")
-          .emit("round message", resultFromCaller);
-      }
-      return res.json(resultFromCaller);
-    };
     // fold if it is player's turn
-    fold(req.user.id, returnResult);
+    fold(req.user.id, returnResult(req, res));
   }
 );
 
@@ -115,33 +65,8 @@ router.post(
   "/bet/:amount",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or emit's success response to socket clients
-    const returnResult = (errors, resultFromCaller = {}) => {
-      const io = req.app.get("socketio");
-      if (errors) {
-        // console.log("errors", errors);
-        res.status(400);
-        return res.json(errors);
-      }
-      // emit a status update to all players at the table that the table has changed. it will also return the response as is
-      if (resultFromCaller === "Success") {
-        io.of("/game")
-          .in("testroom")
-          .emit("table updated");
-      }
-      // if round message received emit to table
-      if (
-        resultFromCaller.winner !== null ||
-        resultFromCaller.bankrupt !== null
-      ) {
-        io.of("/game")
-          .in("testroom")
-          .emit("round message", resultFromCaller);
-      }
-      return res.json(resultFromCaller);
-    };
     // bet if it is player's turn
-    bet(req.user.id, req.params.amount, returnResult);
+    bet(req.user.id, req.params.amount, returnResult(req, res));
   }
 );
 
@@ -149,36 +74,38 @@ router.post(
   "/call",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or emit's success response to socket clients
-    const returnResult = (errors, resultFromCaller = {}) => {
-      const io = req.app.get("socketio");
-      if (errors) {
-        // console.log("errors", errors);
-        res.status(400);
-        return res.json(errors);
-      }
-      // emit a status update to all players at the table that the table has changed. it will also return the response as is
-      if (resultFromCaller === "Success") {
-        io.of("/game")
-          .in("testroom")
-          .emit("table updated");
-      }
-      // if round message received emit to table
-      if (
-        resultFromCaller.winner !== null ||
-        resultFromCaller.bankrupt !== null
-      ) {
-        io.of("/game")
-          .in("testroom")
-          .emit("round message", resultFromCaller);
-      }
-      return res.json(resultFromCaller);
-    };
-
     // call if it is player's turn
-    call(req.user.id, returnResult);
+    call(req.user.id, returnResult(req, res));
   }
 );
+
+// callback function that returns error or emit's success response to socket clients. It uses closure scope to get req and res
+const returnResult = (req, res) => {
+  return (errors, resultFromCaller = {}) => {
+    const io = req.app.get("socketio");
+    if (errors) {
+      // console.log("errors", errors);
+      res.status(400);
+      return res.json(errors);
+    }
+    // emit a status update to all players at the table that the table has changed. it will also return the response as is
+    if (resultFromCaller === "Success") {
+      io.of("/game")
+        .in("testroom")
+        .emit("table updated");
+    }
+    // if round message received emit to table
+    if (
+      resultFromCaller.winner !== null ||
+      resultFromCaller.bankrupt !== null
+    ) {
+      io.of("/game")
+        .in("testroom")
+        .emit("round message", resultFromCaller);
+    }
+    return res.json(resultFromCaller);
+  };
+};
 
 // @route   POST api/game
 // @desc    Exit table, persist to DB
