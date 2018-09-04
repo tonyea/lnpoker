@@ -100,14 +100,26 @@ const joinTable = async (tableID, userID) => {
   }
 };
 
+// @desc - check if it is showdown
+// @params - tableID of table
+// returns bool
+const checkShowdown = async userID => {
+  let isShowdown = await db
+    .query(
+      "SELECT roundname FROM tables where id = (SELECT table_id from user_table WHERE player_id = $1)",
+      [userID]
+    )
+    .then(res => res.rows[0].roundname === "Showdown");
+
+  return isShowdown;
+};
+
 // @params tableID, userID
 // @return array
 // @desc return array of users found on table
 const getPlayersAtTable = async (tableID, userID) => {
   // show opponents cards if showdown, else show null in opponents card
-  let isShowdown = await db
-    .query("SELECT roundname FROM tables where id = $1", [tableID])
-    .then(res => res.rows[0].roundname === "Showdown");
+  let isShowdown = await checkShowdown(userID);
 
   const players = await db.query(
     `
@@ -386,6 +398,14 @@ const fillDeck = () => {
 const check = async (userID, cb) => {
   const errors = {};
   try {
+    // Disable all actions on showdown
+    await checkShowdown(userID).then(res => {
+      if (res) {
+        errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
@@ -432,6 +452,14 @@ const check = async (userID, cb) => {
 const fold = async (userID, cb) => {
   const errors = {};
   try {
+    // Disable all actions on showdown
+    await checkShowdown(userID).then(res => {
+      if (res) {
+        errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
@@ -471,6 +499,14 @@ const fold = async (userID, cb) => {
 const bet = async (userID, betAmount, cb) => {
   const errors = {};
   try {
+    // Disable all actions on showdown
+    await checkShowdown(userID).then(res => {
+      if (res) {
+        errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
@@ -507,6 +543,14 @@ const bet = async (userID, betAmount, cb) => {
 const allin = async (userID, cb) => {
   const errors = {};
   try {
+    // Disable all actions on showdown
+    await checkShowdown(userID).then(res => {
+      if (res) {
+        errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
@@ -557,6 +601,14 @@ const getMaxBet = async userID => {
 const call = async (userID, cb) => {
   const errors = {};
   try {
+    // Disable all actions on showdown
+    await checkShowdown(userID).then(res => {
+      if (res) {
+        errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {

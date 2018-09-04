@@ -47,7 +47,8 @@ export default class Player extends PureComponent {
       bet,
       currentplayer,
       isSmallBlind,
-      isBigBlind
+      isBigBlind,
+      roundname
     } = this.props.myInfo;
 
     // console.log("cards", props.myInfo);
@@ -102,7 +103,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-secondary"
             onClick={this.checkGame}
-            disabled={!currentplayer}
+            disabled={!currentplayer || roundname !== "Showdown"}
           >
             Check
           </button>
@@ -110,7 +111,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-primary"
             onClick={this.callGame}
-            disabled={!currentplayer}
+            disabled={!currentplayer || roundname !== "Showdown"}
           >
             Call
           </button>
@@ -118,7 +119,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-danger"
             onClick={this.foldGame}
-            disabled={!currentplayer}
+            disabled={!currentplayer || roundname !== "Showdown"}
           >
             Fold
           </button>
@@ -126,7 +127,7 @@ export default class Player extends PureComponent {
             type="button"
             className="btn btn-outline-light"
             onClick={this.betGame}
-            disabled={!currentplayer}
+            disabled={!currentplayer || roundname !== "Showdown"}
           >
             Bet
           </button>
@@ -139,6 +140,7 @@ export default class Player extends PureComponent {
               max={chips}
               step="1"
               onChange={this.handleChange}
+              disabled={!currentplayer || roundname !== "Showdown"}
             />
             <span className="bet-slider__value">
               {this.state.betAmount} Sats

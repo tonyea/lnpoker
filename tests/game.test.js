@@ -896,6 +896,18 @@ describe("Game Tests", () => {
       .set("Authorization", notCurrentPlayer.token)
       .send();
 
+    // // No more moves allowed after showdown
+    // await request(app)
+    //   .post("/api/game/check")
+    //   .set("Authorization", currentPlayer.token)
+    //   .send()
+    //   .then(res => {
+    //     expect(res.statusCode).toBe(400);
+    //     expect(res.body).toEqual({
+    //       notallowed: "No moves allowed after showdown"
+    //     });
+    //   });
+
     await db.query("SELECT roundbet, bet, talked FROM user_table").then(res => {
       // at end of showdown roundbets are 0
       expect(res.rows[0].roundbet).toBe(0);
