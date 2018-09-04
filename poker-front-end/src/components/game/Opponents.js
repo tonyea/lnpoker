@@ -5,10 +5,14 @@ import PropTypes from "prop-types";
 const Opponents = props => {
   const renderOpponent = (playerInfo, playerKey) => {
     return (
-      <Opponent playerInfo={playerInfo} key={playerKey} roundname={roundname} />
+      <Opponent
+        playerInfo={playerInfo}
+        key={playerKey}
+        disabledstate={disabledstate}
+      />
     );
   };
-  const { opponents, roundname } = props;
+  const { opponents, disabledstate } = props;
 
   const playerRows = [];
   if (opponents.length > 0) {

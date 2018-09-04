@@ -24,10 +24,12 @@ class Table extends PureComponent {
     // Set state of game when table is mounted
     console.log("mounted");
     this.props.fetchGameData();
+
     this.state.socket.on("connect", () => {
       this.state.socket.emit("room", "testroom");
       console.log("emitted room info");
     });
+
     this.state.socket.on("round message", msg =>
       this.setState({ roundmessage: msg })
     );
@@ -45,6 +47,12 @@ class Table extends PureComponent {
     const { user } = this.props;
     const { players, isFetching, roundname, ...rest } = this.props.game;
 
+    // bool to decide whether to show buttons
+    const disabledstate =
+      roundname === "Showdown" ||
+      this.state.roundmessage.winner ||
+      this.state.roundmessage.bankrupt;
+
     // loading indicator
     if (isFetching || !rest.smallblind) {
       return <p> Loading </p>;
@@ -57,13 +65,11 @@ class Table extends PureComponent {
 
     return (
       <div className="container table-container">
-        <Opponents opponents={opponents} roundname={roundname} />
+        <Opponents opponents={opponents} disabledstate={disabledstate} />
 
         <Board {...rest} roundMessage={this.state.roundmessage} />
 
-        <Player myInfo={myInfo} roundname={roundname} />
-
-        {/* <Chat socket={this.state.socket} chatLog={chatLog} /> */}
+        <Player myInfo={myInfo} disabledstate={disabledstate} />
       </div>
     );
   }

@@ -648,10 +648,12 @@ const call = async (userID, cb) => {
 const getGame = async userID => {
   const res = await db.query(
     `
-    SELECT user_table.id as id, currentplayer, bet, cards, player_id, table_id, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
+    SELECT user_table.id as id, username, currentplayer, bet, cards, player_id, table_id, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
     FROM user_table 
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
+    INNER JOIN USERS
+    ON users.id = user_table.player_id
     WHERE table_id = (SELECT table_id 
       FROM user_table
       WHERE player_id = $1)
@@ -863,7 +865,7 @@ const checkForWinner = async userID => {
     }
     // send message about winner
     winnerList.push({
-      playerName: winningPlayer.player_id,
+      playerName: winningPlayer.username,
       amount: winnerPrize,
       hand: winningPlayer.rankname,
       chips: parseFloat(winningPlayer.chips) + winnerPrize
