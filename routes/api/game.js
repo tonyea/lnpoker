@@ -55,6 +55,15 @@ router.post(
           .in("testroom")
           .emit("table updated");
       }
+      // if round message received emit to table
+      if (
+        resultFromCaller.winner !== null ||
+        resultFromCaller.bankrupt !== null
+      ) {
+        io.of("/game")
+          .in("testroom")
+          .emit("round message", resultFromCaller);
+      }
       return res.json(resultFromCaller);
     };
     // check if it is player's turn
@@ -82,6 +91,15 @@ router.post(
         io.of("/game")
           .in("testroom")
           .emit("table updated");
+      }
+      // if round message received emit to table
+      if (
+        resultFromCaller.winner !== null ||
+        resultFromCaller.bankrupt !== null
+      ) {
+        io.of("/game")
+          .in("testroom")
+          .emit("round message", resultFromCaller);
       }
       return res.json(resultFromCaller);
     };
@@ -111,6 +129,15 @@ router.post(
           .in("testroom")
           .emit("table updated");
       }
+      // if round message received emit to table
+      if (
+        resultFromCaller.winner !== null ||
+        resultFromCaller.bankrupt !== null
+      ) {
+        io.of("/game")
+          .in("testroom")
+          .emit("round message", resultFromCaller);
+      }
       return res.json(resultFromCaller);
     };
     // bet if it is player's turn
@@ -135,6 +162,15 @@ router.post(
         io.of("/game")
           .in("testroom")
           .emit("table updated");
+      }
+      // if round message received emit to table
+      if (
+        resultFromCaller.winner !== null ||
+        resultFromCaller.bankrupt !== null
+      ) {
+        io.of("/game")
+          .in("testroom")
+          .emit("round message", resultFromCaller);
       }
       return res.json(resultFromCaller);
     };

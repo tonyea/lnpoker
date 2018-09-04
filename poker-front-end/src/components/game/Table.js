@@ -15,7 +15,8 @@ class Table extends PureComponent {
     super(props);
 
     this.state = {
-      socket: io("http://localhost:8010/game")
+      socket: io("http://localhost:8010/game"),
+      roundmessage: {}
     };
   }
 
@@ -27,7 +28,9 @@ class Table extends PureComponent {
       this.state.socket.emit("room", "testroom");
       console.log("emitted room info");
     });
-    this.state.socket.on("message", msg => console.log(msg));
+    this.state.socket.on("round message", msg =>
+      this.setState({ roundmessage: msg })
+    );
 
     this.state.socket.on("table updated", () => this.props.fetchGameData());
   }
@@ -56,7 +59,7 @@ class Table extends PureComponent {
       <div className="container table-container">
         <Opponents opponents={opponents} />
 
-        <Board {...rest} />
+        <Board {...rest} roundMessage={this.state.roundmessage} />
 
         <Player myInfo={myInfo} />
 

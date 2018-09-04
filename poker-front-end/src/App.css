@@ -44,7 +44,7 @@ body {
   color: white;
 }
 
-.deck-row > .card {
+.deck-row-cards > .card {
   max-width: 100px;
   margin-right: 10px;
 }
