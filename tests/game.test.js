@@ -294,7 +294,6 @@ describe("Game Tests", () => {
         maxbuyin: expect.any(Number),
         pot: expect.any(Number),
         roundname: expect.any(String),
-        betname: expect.any(String),
         status: expect.any(String)
       })
     );
@@ -971,9 +970,7 @@ describe("Game Tests", () => {
       `,
       [currentPlayer.playerName]
     );
-    // .then(res => {
-    //   console.log(res.rows[0]);
-    // });
+
     let roundbet;
     await db
       .query(
@@ -1023,7 +1020,60 @@ describe("Game Tests", () => {
       });
   });
 
-  // table progresses from one round to next - roundname changes back to 'Deal'
+  // // table progresses from one round to next - roundname changes back to 'Deal'
+  // test("Init new round", async () => {
+  //   // play rounds past showdown with 2 players
+  //   // login minimum number of players and have them join a game
+  //   await playersJoinGame();
+  //   // set current and non-current players
+  //   await setCurrentPlayer();
+  //   // sb calls
+  //   await request(app)
+  //     .post("/api/game/call")
+  //     .set("Authorization", currentPlayer.token)
+  //     .send();
+  //   // 'Deal' last check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", notCurrentPlayer.token)
+  //     .send();
+  //   // 'Flop' 1st check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", currentPlayer.token)
+  //     .send();
+  //   // 'Flop' last check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", notCurrentPlayer.token)
+  //     .send();
+  //   // 'Turn' 1st check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", currentPlayer.token)
+  //     .send();
+  //   // 'Turn' last check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", notCurrentPlayer.token)
+  //     .send();
+  //   // 'River' 1st check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", currentPlayer.token)
+  //     .send();
+  //   // 'River' last check
+  //   await request(app)
+  //     .post("/api/game/check")
+  //     .set("Authorization", notCurrentPlayer.token)
+  //     .send();
+
+  //   // verify that roundname is showdown
+
+  //   // wait 3 seconds
+
+  //   // verify that roundname is deal
+  // });
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player

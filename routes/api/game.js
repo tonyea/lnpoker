@@ -103,6 +103,8 @@ const returnResult = (req, res) => {
         .in("testroom")
         .emit("round message", resultFromCaller);
     }
+    // trigger init new round if winner
+
     return res.json(resultFromCaller);
   };
 };

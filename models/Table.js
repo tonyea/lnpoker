@@ -6,7 +6,7 @@ const { rankHandInt } = require("./Rank");
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
 const findTable = async () => {
   const { rows } = await db.query(
-    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, betname, board, status FROM tables limit 1"
+    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status FROM tables limit 1"
   );
 
   if (rows.length < 1) {
@@ -21,7 +21,7 @@ const findTable = async () => {
 // @desc create a new table using default params instead of destructuring table arguments, start new round
 const createNewTable = async userID => {
   const res = await db.query(
-    "INSERT INTO tables DEFAULT VALUES returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, betname, board, status "
+    "INSERT INTO tables DEFAULT VALUES returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status "
   );
 
   // auto join newly created table
@@ -309,17 +309,25 @@ const initNewRound = tableID => {
   // set pot to 0,
   this.game.pot = 0;
   this.game.roundName = "Deal"; //Start the first round
-  this.game.betName = "bet"; //bet,raise,re-raise,cap
+  // set all bets to 0 in user_table
   this.game.bets.splice(0, this.game.bets.length);
+  // empty deck in tables
   this.game.deck.splice(0, this.game.deck.length);
+  // empty board in tables
   this.game.board.splice(0, this.game.board.length);
+
+  // set each player last action to null, talked to false, cards to empty array
   for (i = 0; i < this.players.length; i += 1) {
     this.players[i].folded = false;
     this.players[i].talked = false;
     this.players[i].allIn = false;
     this.players[i].cards.splice(0, this.players[i].cards.length);
   }
+
+  // fill deck with new cards
   fillDeck(this.game.deck);
+
+  // call new round
   this.NewRound();
 };
 
