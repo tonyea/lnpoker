@@ -1006,6 +1006,7 @@ describe("Game Tests", () => {
         [currentPlayer.playerName]
       )
       .then(res => {
+        console.log("bankrupt", res.rows);
         expect(res.rows.length).toBe(0);
       });
   });

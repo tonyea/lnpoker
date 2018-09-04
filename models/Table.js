@@ -412,9 +412,8 @@ const check = async (userID, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
-      //Attempt to progress the game
-      await progress(userID);
-      return cb(null, "Success");
+      // if progress returns an object then return it to the callback
+      return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
     return cb(errors, null);
@@ -452,9 +451,8 @@ const fold = async (userID, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
-      //Attempt to progress the game
-      await progress(userID);
-      return cb(null, "Success");
+      // if progress returns an object then return it to the callback
+      return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
     return cb(errors, null);
@@ -462,7 +460,7 @@ const fold = async (userID, cb) => {
     //Attemp to progress the game
     // progress(this.table);
   } catch (e) {
-    errors.notallowed = "Check not allowed, replay please";
+    errors.notallowed = "Fold not allowed, replay please";
     return cb(errors, null);
   }
 };
@@ -498,9 +496,8 @@ const bet = async (userID, betAmount, cb) => {
       [userID, betAmount]
     );
 
-    //Attempt to progress the game
-    await progress(userID);
-    return cb(null, "Success");
+    // if progress returns an object then return it to the callback
+    return cb(null, await progress(userID));
   } catch (e) {
     errors.notallowed = "Bet not allowed, replay please";
     return cb(errors, null);
@@ -587,8 +584,8 @@ const call = async (userID, cb) => {
       [userID, maxBet]
     );
 
-    await progress(userID);
-    return cb(null, "Success");
+    // if progress returns an object then return it to the callback
+    return cb(null, await progress(userID));
     //Attemp to progress the game
   } catch (e) {
     errors.notallowed = "Bet not allowed, replay please";
@@ -648,8 +645,16 @@ const progress = async userID => {
           let hand = rankHand({ cards });
           await setRank(userTable[j].player_id, hand);
         }
-        await checkForWinner(userID);
-        await checkForBankrupt(userID);
+        // compile check for winner and check for bankrupt into one messages object and if it exists then return it
+        let endRoundMessage = {};
+        endRoundMessage.winner = await checkForWinner(userID);
+        endRoundMessage.bankrupt = await checkForBankrupt(userID);
+        if (
+          endRoundMessage.winner.length > 0 ||
+          endRoundMessage.bankrupt.length > 0
+        ) {
+          return endRoundMessage;
+        }
       } else if (roundname === "Turn") {
         await setRoundName("River", userID);
         await burnTurn(1, userID);
@@ -664,6 +669,8 @@ const progress = async userID => {
         await removeTalked(userID);
       }
     }
+    // return success message
+    return "Success";
   }
 };
 
@@ -735,16 +742,16 @@ const checkForWinner = async userID => {
   maxRank = 0.0;
   for (k = 0; k < players.length; k += 1) {
     const rank = parseFloat(players[k].rank);
-    console.log(
-      "rank",
-      rank,
-      "maxrank",
-      maxRank,
-      "players[k].lastaction",
-      players[k].lastaction,
-      "players[k].player_id",
-      players[k].player_id
-    );
+    // console.log(
+    //   "rank",
+    //   rank,
+    //   "maxrank",
+    //   maxRank,
+    //   "players[k].lastaction",
+    //   players[k].lastaction,
+    //   "players[k].player_id",
+    //   players[k].player_id
+    // );
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
     if (rank === maxRank && players[k].lastaction !== "fold") {
       // console.log("maxRank 1 ", maxRank);
@@ -794,6 +801,7 @@ const checkForWinner = async userID => {
   }
 
   // for each winner, distribute his prize split evenly
+  let winnerList = [];
   for (i = 0; i < winners.length; i += 1) {
     let winnerPrize = parseFloat(prize / winners.length);
     let winningPlayer = winners[i];
@@ -802,13 +810,12 @@ const checkForWinner = async userID => {
       await setLastAction(winningPlayer.player_id, "fold");
     }
     // send message about winner
-    console.log({
+    winnerList.push({
       playerName: winningPlayer.player_id,
       amount: winnerPrize,
       hand: winningPlayer.rankname,
       chips: parseFloat(winningPlayer.chips) + winnerPrize
     });
-    console.log("player " + winningPlayer.player_id + " wins !!");
   }
 
   // if any player doesn't have roundbet of 0, check for winner again
@@ -821,11 +828,15 @@ const checkForWinner = async userID => {
   if (roundEnd === false) {
     await checkForWinner(userID);
   }
+
+  // return winners array
+  return winnerList;
 };
 
 const checkForBankrupt = async userID => {
   // if a player on the table has 0 chips
   // remove player from table
+  let losers = [];
   await db
     .query(
       `
@@ -839,13 +850,12 @@ const checkForBankrupt = async userID => {
     .then(res => {
       if (res.rows.length > 0) {
         // for each player that has gone bankrupt, send a message that he has left the table
-        res.rows.forEach(player =>
-          console.log(
-            player.player_id + " has gone bankrupt and left the table!"
-          )
+        res.rows.forEach(
+          player => losers.push(player.player_id) // + " has gone bankrupt and left the table!"
         );
       }
     });
+  return losers;
 };
 
 // return players that are all in
