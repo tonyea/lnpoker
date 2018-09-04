@@ -51,7 +51,9 @@ router.post(
       }
       // emit a status update to all players at the table that the table has changed. it will also return the response as is
       if (resultFromCaller === "Success") {
-        io.emit("table updated");
+        io.of("/game")
+          .in("testroom")
+          .emit("table updated");
       }
       return res.json(resultFromCaller);
     };
@@ -77,7 +79,9 @@ router.post(
       }
       // emit a status update to all players at the table that the table has changed. it will also return the response as is
       if (resultFromCaller === "Success") {
-        io.emit("table updated");
+        io.of("/game")
+          .in("testroom")
+          .emit("table updated");
       }
       return res.json(resultFromCaller);
     };
@@ -103,7 +107,9 @@ router.post(
       }
       // emit a status update to all players at the table that the table has changed. it will also return the response as is
       if (resultFromCaller === "Success") {
-        io.emit("table updated");
+        io.of("/game")
+          .in("testroom")
+          .emit("table updated");
       }
       return res.json(resultFromCaller);
     };
@@ -126,7 +132,9 @@ router.post(
       }
       // emit a status update to all players at the table that the table has changed. it will also return the response as is
       if (resultFromCaller === "Success") {
-        io.emit("table updated");
+        io.of("/game")
+          .in("testroom")
+          .emit("table updated");
       }
       return res.json(resultFromCaller);
     };

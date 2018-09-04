@@ -21,7 +21,14 @@ class Table extends PureComponent {
 
   componentDidMount() {
     // Set state of game when table is mounted
+    console.log("mounted");
     this.props.fetchGameData();
+    this.state.socket.on("connect", () => {
+      this.state.socket.emit("room", "testroom");
+      console.log("emitted room info");
+    });
+    this.state.socket.on("message", msg => console.log(msg));
+
     this.state.socket.on("table updated", () => this.props.fetchGameData());
   }
 
