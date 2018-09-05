@@ -7,7 +7,8 @@ const {
   fold,
   bet,
   call,
-  exitTable
+  exitTable,
+  initNewRound
 } = require("../../models/Table");
 
 // @route   POST api/game
@@ -104,6 +105,11 @@ const returnResult = (req, res) => {
         .emit("round message", resultFromCaller);
     }
     // trigger init new round if winner
+    if (resultFromCaller.winner !== null) {
+      setTimeout(() => {
+        return initNewRound(req.user.id);
+      }, 3000);
+    }
 
     return res.json(resultFromCaller);
   };

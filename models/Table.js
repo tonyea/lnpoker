@@ -299,36 +299,45 @@ const newRound = async tableID => {
 // @desc - trigger this after a round is complete
 // @params - tableID
 // returns null
-const initNewRound = tableID => {
-  // cycle dealer clockwise
-  let i;
-  this.dealer += 1;
-  if (this.dealer >= this.players.length) {
-    this.dealer = 0;
-  }
-  // set pot to 0,
-  this.game.pot = 0;
-  this.game.roundName = "Deal"; //Start the first round
-  // set all bets to 0 in user_table
-  this.game.bets.splice(0, this.game.bets.length);
-  // empty deck in tables
-  this.game.deck.splice(0, this.game.deck.length);
-  // empty board in tables
-  this.game.board.splice(0, this.game.board.length);
+const initNewRound = async userID => {
+  console.log("roundname changed", userID);
 
-  // set each player last action to null, talked to false, cards to empty array
-  for (i = 0; i < this.players.length; i += 1) {
-    this.players[i].folded = false;
-    this.players[i].talked = false;
-    this.players[i].allIn = false;
-    this.players[i].cards.splice(0, this.players[i].cards.length);
-  }
+  // // get all players at table
+  // let players = [];
+  // await db
+  //   .query(
+  //     "SELECT player_id, dealer from user_table where table_id = (SELECT table_id FROM user_table WHERE player_id = $1) order by id",
+  //     [userID]
+  //   )
+  //   .then(res => (players = res.rows));
 
-  // fill deck with new cards
-  fillDeck(this.game.deck);
+  // // cycle dealer clockwise
+  // let dealerIndex = players.findIndex(player => player.dealer === true) + 1;
+  // if (dealerIndex >= players.length) {
+  //   dealerIndex = 0;
+  // }
+  // const dealerID = players[dealerIndex].player_id;
+  // await db.query("UPDATE user_table SET dealer=true WHERE player_id=$1", [
+  //   dealerID
+  // ]);
 
-  // call new round
-  this.NewRound();
+  // // set pot to 0, empty deck in tables, empty board in tables
+  // await db.query(
+  //   "UPDATE tables SET pot=0, deck='{}', board='{}' WHERE id=(SELECT table_id FROM user_table WHERE player_id = $1)",
+  //   [userID]
+  // );
+
+  // // set roundname to Deal
+  await setRoundName("Deal", userID);
+
+  // // set all bets to 0 in user_table, set each player last action to null, talked to false, cards to empty array
+  // await db.query(
+  //   "UPDATE user_table SET bet=0, lastaction=null, talked=false, cards='{}' WHERE table_id=(SELECT table_id FROM user_table WHERE player_id = $1)",
+  //   [userID]
+  // );
+
+  // // call new round
+  // // this.NewRound();
 };
 
 // function to create and shuffle a deck of 52 cards
@@ -1087,5 +1096,6 @@ module.exports = {
   check,
   fold,
   bet,
-  call
+  call,
+  initNewRound
 };
