@@ -233,6 +233,7 @@ const newRound = async tableID => {
   );
   // all players at table
   const players = dbRes.rows;
+  console.log("players", players);
 
   // deck will contain 52 cards to start
   const deck = fillDeck();
@@ -244,9 +245,6 @@ const newRound = async tableID => {
       cards,
       players[i].player_id
     ]);
-
-    // this.game.bets[i] = 0;
-    // this.game.roundBets[i] = 0;
   }
 
   // Force Blind Bets
@@ -263,11 +261,14 @@ const newRound = async tableID => {
   }
   // get currentPlayer
   let currentPlayerIndex = dealerIndex + 3;
-  if (currentPlayerIndex >= players.length) {
+  if (currentPlayerIndex >= players.length && players.length > 2) {
     currentPlayerIndex -= players.length;
+  } else if (players.length === 2) {
+    currentPlayerIndex = smallBlindIndex;
   }
   const smallBlindPlayerID = players[smallBlindIndex].player_id;
   const bigBlindPlayerID = players[bigBlindIndex].player_id;
+  console.log("current player ", players[currentPlayerIndex]);
   const currentPlayerID = players[currentPlayerIndex].player_id;
   // deduct small blind amount from small blind user
   await db.query(
@@ -300,44 +301,55 @@ const newRound = async tableID => {
 // @params - tableID
 // returns null
 const initNewRound = async userID => {
-  console.log("roundname changed", userID);
+  // console.log("initNewRound", userID);
 
-  // // get all players at table
-  // let players = [];
-  // await db
-  //   .query(
-  //     "SELECT player_id, dealer from user_table where table_id = (SELECT table_id FROM user_table WHERE player_id = $1) order by id",
-  //     [userID]
-  //   )
-  //   .then(res => (players = res.rows));
+  // get all players at table
+  let players = [];
+  await db
+    .query(
+      "SELECT player_id, dealer from user_table where table_id = (SELECT table_id FROM user_table WHERE player_id = $1) order by id",
+      [userID]
+    )
+    .then(res => (players = res.rows));
 
-  // // cycle dealer clockwise
-  // let dealerIndex = players.findIndex(player => player.dealer === true) + 1;
-  // if (dealerIndex >= players.length) {
-  //   dealerIndex = 0;
-  // }
-  // const dealerID = players[dealerIndex].player_id;
-  // await db.query("UPDATE user_table SET dealer=true WHERE player_id=$1", [
-  //   dealerID
-  // ]);
+  if (players.length === 0) {
+    return false;
+  }
+  // cycle dealer clockwise
+  let dealerIndex = players.findIndex(player => player.dealer === true) + 1;
+  if (dealerIndex >= players.length) {
+    dealerIndex = 0;
+  }
+  const dealerID = players[dealerIndex].player_id;
+  // console.log(dealerID);
+  await db.query("UPDATE user_table SET dealer=true WHERE player_id=$1", [
+    dealerID
+  ]);
+  await db.query(
+    "UPDATE user_table SET dealer=false WHERE player_id!=$1 AND table_id=(SELECT table_id FROM user_table where player_id = $1)",
+    [dealerID]
+  );
 
-  // // set pot to 0, empty deck in tables, empty board in tables
-  // await db.query(
-  //   "UPDATE tables SET pot=0, deck='{}', board='{}' WHERE id=(SELECT table_id FROM user_table WHERE player_id = $1)",
-  //   [userID]
-  // );
+  // set pot to 0, empty deck in tables, empty board in tables
+  await db.query(
+    "UPDATE tables SET pot=0, deck='{}', board='{}' WHERE id=(SELECT table_id FROM user_table WHERE player_id = $1)",
+    [userID]
+  );
 
-  // // set roundname to Deal
+  // set roundname to Deal
   await setRoundName("Deal", userID);
 
-  // // set all bets to 0 in user_table, set each player last action to null, talked to false, cards to empty array
-  // await db.query(
-  //   "UPDATE user_table SET bet=0, lastaction=null, talked=false, cards='{}' WHERE table_id=(SELECT table_id FROM user_table WHERE player_id = $1)",
-  //   [userID]
-  // );
+  // set all bets to 0 in user_table, set each player last action to null, talked to false, cards to empty array
+  let tableID;
+  await db
+    .query(
+      "UPDATE user_table SET bet=0, roundbet=0, lastaction=null, talked=false, cards='{}' WHERE table_id=(SELECT table_id FROM user_table WHERE player_id = $1) returning table_id",
+      [userID]
+    )
+    .then(res => (tableID = res.rows[0].table_id));
 
-  // // call new round
-  // // this.NewRound();
+  // call new round
+  await newRound(tableID);
 };
 
 // function to create and shuffle a deck of 52 cards

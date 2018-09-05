@@ -34,7 +34,10 @@ class Table extends PureComponent {
       this.setState({ roundmessage: msg })
     );
 
-    this.state.socket.on("table updated", () => this.props.fetchGameData());
+    this.state.socket.on("table updated", () => {
+      console.log("table updated");
+      this.props.fetchGameData();
+    });
   }
 
   componentWillUnmount() {

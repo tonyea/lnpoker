@@ -96,18 +96,20 @@ const returnResult = (req, res) => {
         .emit("table updated");
     }
     // if round message received emit to table
-    if (
-      resultFromCaller.winner !== null ||
-      resultFromCaller.bankrupt !== null
-    ) {
+    if (resultFromCaller.winner || resultFromCaller.bankrupt) {
       io.of("/game")
         .in("testroom")
         .emit("round message", resultFromCaller);
     }
     // trigger init new round if winner
-    if (resultFromCaller.winner !== null) {
+    if (resultFromCaller.winner) {
+      console.log(resultFromCaller.winner);
       setTimeout(() => {
-        return initNewRound(req.user.id);
+        initNewRound(req.user.id).then(res => {
+          io.of("/game")
+            .in("testroom")
+            .emit("table updated");
+        });
       }, 3000);
     }
 

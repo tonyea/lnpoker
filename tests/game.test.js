@@ -1029,105 +1029,97 @@ describe("Game Tests", () => {
   });
 
   // table progresses from one round to next - roundname changes back to 'Deal'
-  test(
-    "Init new round",
-    async () => {
-      // play rounds past showdown with 2 players
-      // login minimum number of players and have them join a game
-      await playersJoinGame();
-      // set current and non-current players
-      await setCurrentPlayer();
-      // sb calls
-      await request(app)
-        .post("/api/game/call")
-        .set("Authorization", currentPlayer.token)
-        .send();
-      // 'Deal' last check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", notCurrentPlayer.token)
-        .send();
-      // 'Flop' 1st check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", currentPlayer.token)
-        .send();
-      // 'Flop' last check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", notCurrentPlayer.token)
-        .send();
-      // 'Turn' 1st check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", currentPlayer.token)
-        .send();
-      // 'Turn' last check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", notCurrentPlayer.token)
-        .send();
-      // 'River' 1st check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", currentPlayer.token)
-        .send();
+  test("Init new round", async () => {
+    // play rounds past showdown with 2 players
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+    // set current and non-current players
+    await setCurrentPlayer();
+    // sb calls
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Deal' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+    // 'Flop' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Flop' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+    // 'Turn' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+    // 'Turn' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+    // 'River' 1st check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
 
-      // 'River' last check
-      await request(app)
-        .post("/api/game/check")
-        .set("Authorization", notCurrentPlayer.token)
-        .send();
+    // 'River' last check
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
 
-      // verify that roundname is showdown
-      await request(app)
-        .post("/api/game/")
-        .set("Authorization", notCurrentPlayer.token)
-        .send()
-        .then(res => expect(res.body.roundname).toBe("Showdown"));
+    // verify that roundname is showdown
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", notCurrentPlayer.token)
+      .send()
+      .then(res => expect(res.body.roundname).toBe("Showdown"));
 
-      // waiting 3 seconds
-      await new Promise(res =>
-        setTimeout(() => {
-          res();
-        }, 3000)
-      );
+    // waiting 3 seconds
+    await new Promise(res =>
+      setTimeout(() => {
+        res();
+      }, 4000)
+    );
 
-      await request(app)
-        .post("/api/game/")
-        .set("Authorization", notCurrentPlayer.token)
-        .send()
-        .then(res => {
-          // verify that roundname is deal
-          expect(res.body.roundname).toBe("Deal");
-          // cycle dealer clockwise - p2 should be dealer
-          const players = res.body.players;
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", notCurrentPlayer.token)
+      .send()
+      .then(res => {
+        // verify that roundname is deal
+        expect(res.body.roundname).toBe("Deal");
+        // cycle dealer clockwise - p2 should be dealer
+        const resPlayers = res.body.players;
+        const player = resPlayers.find(player => player.dealer === true);
+        expect(player.username).toBe(players[1].playerName);
+        // set pot to 0, empty deck in tables, empty board in tables
+        expect(res.body.pot).toBe(0);
+        expect(res.body.board).toEqual([]);
 
-          // const player = players.find(player=> player.dealer===true)
-        });
+        // set each player last action to null, talked to false, cards to empty array
+        expect(resPlayers[0].lastaction).toBe(null);
+        expect(resPlayers[0].talked).toBe(false);
+        expect(resPlayers[1].lastaction).toBe(null);
+        expect(resPlayers[1].talked).toBe(false);
+      });
 
-      // set pot to 0,
+    // call new round
 
-      // set all bets to 0 in user_table
-
-      // empty deck in tables
-
-      // empty board in tables
-
-      // set each player last action to null, talked to false, cards to empty array
-
-      // fill deck with new cards
-
-      // call new round
-
-      // add pending players
-    }
-  );
+    // add pending players
+  });
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
-
-  // new round initiation
 
   // test tie breaker - https://www.adda52.com/poker/poker-rules/cash-game-rules/tie-breaker-rules
   // two royal flushes - slpit pot
