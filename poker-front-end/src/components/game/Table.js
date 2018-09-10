@@ -48,9 +48,13 @@ class Table extends PureComponent {
   render() {
     console.log("rendered");
 
-    const { user } = this.props;
+    const { user, errors } = this.props;
     const { players, isFetching, roundname, ...rest } = this.props.game;
 
+    // display error
+    if (errors && errors.players) {
+      return <p> {errors.players}</p>;
+    }
     // bool to decide whether to show buttons
     const disabledstate =
       roundname === "Showdown" ||
@@ -90,7 +94,8 @@ const mapStateToProps = state => ({
   user: {
     id: state.auth.user.id,
     name: state.auth.user.username
-  }
+  },
+  errors: state.errors
 });
 
 export default connect(
