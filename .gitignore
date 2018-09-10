@@ -10,3 +10,4 @@ package-lock.json
 lnpoker.code-workspace
 log
 test-report.html
+.vscode
