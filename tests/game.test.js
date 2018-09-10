@@ -400,7 +400,7 @@ describe("Game Tests", () => {
   });
 
   test("Game action - Fold", async () => {
-    expect.assertions(10);
+    expect.assertions(8);
     // login minimum number of players and have them join a game
     await playersJoinGame();
 
@@ -441,7 +441,6 @@ describe("Game Tests", () => {
       .send();
 
     expect(resFoldCurrent.statusCode).toBe(200);
-    expect(resFoldCurrent.body).toContain("Success");
 
     // // if I'm allowed to fold then set my bet field to 0
     // // set talked to true
@@ -455,11 +454,6 @@ describe("Game Tests", () => {
         expect(dbRes1.rows[0].talked).toBe(true);
         expect(dbRes1.rows[0].lastaction).toBe("fold");
       });
-
-    //add my bet to the pot
-    await db.query("SELECT pot FROM tables limit 1").then(dbRes2 => {
-      expect(parseInt(dbRes2.rows[0].pot)).toBe(betAmount);
-    });
   });
 
   test("Game action - Bet", async () => {
@@ -1131,44 +1125,50 @@ describe("Game Tests", () => {
       .then(res => (totalBets = res.rows[0].bets));
 
     // get current chips
-    let currentPlayerChips;
+    let notCurrentPlayerChips;
+    let smallblind;
     await request(app)
       .post("/api/game/")
-      .set("Authorization", currentPlayer.token)
+      .set("Authorization", notCurrentPlayer.token)
       .send()
-      .then(
-        res =>
-          (currentPlayerChips = res.body.players.find(
-            player => player.username === currentPlayer.playerName
-          ).chips)
-      );
+      .then(res => {
+        notCurrentPlayerChips = res.body.players.find(
+          player => player.username === notCurrentPlayer.playerName
+        ).chips;
 
-    // expected total chips = bets + existing chips (- blind bets in next round)
+        smallblind = res.body.smallblind;
+      });
+
+    // expected total chips = bets + existing chips - smallblind
     const expectedTotalChips =
-      parseInt(totalBets) + parseInt(currentPlayerChips);
+      parseInt(totalBets) +
+      parseInt(notCurrentPlayerChips) -
+      parseInt(smallblind);
 
-    // make all players except 1 player fold
-    await request(app)
-      .post("/api/game/check")
-      .set("Authorization", currentPlayer.token)
-      .send();
-
+    // make 1 player fold
     await request(app)
       .post("/api/game/fold")
-      .set("Authorization", notCurrentPlayer.token)
+      .set("Authorization", currentPlayer.token)
       .send();
+
+    // waiting 4 seconds
+    await new Promise(res =>
+      setTimeout(() => {
+        res();
+      }, 4000)
+    );
 
     // bets added to pot
     // unfolded player doesn't need to do an action - end of round
     // unfolded player checks his table and sees chips plus pot amount
     await request(app)
       .post("/api/game/")
-      .set("Authorization", currentPlayer.token)
+      .set("Authorization", notCurrentPlayer.token)
       .send()
       .then(res =>
         expect(
           res.body.players.find(
-            player => player.username === currentPlayer.playerName
+            player => player.username === notCurrentPlayer.playerName
           ).chips
         ).toBe(expectedTotalChips)
       );
