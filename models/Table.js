@@ -79,8 +79,9 @@ const joinTable = async (tableID, userID) => {
   }
   // check if we have minimum number of players
   if (numPlayers < minPlayers) {
-    errors.players = "Not enough players";
-    throw errors;
+    return;
+    // errors.players = "Not enough players";
+    // throw errors;
   }
   // start new round if status is 'waiting'
   if (tableRow.rows[0].status === "waiting") {

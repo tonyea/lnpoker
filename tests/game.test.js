@@ -82,19 +82,16 @@ describe("Game Tests", () => {
   };
 
   test("User logs in, gets seated at a table", async () => {
-    expect.assertions(5);
+    expect.assertions(4);
 
     const res = await joinGame(players[0]);
 
     // check to see if response is error. User sees waiting warning if first at table
-    expect(res.statusCode).toBe(400);
-    expect(res.body.players).toEqual("Not enough players");
-
+    expect(res.statusCode).toBe(200);
     // If I am the first player at a table, I see a sign saying that the table is waiting for more players
     // The state of the game in the DB is 'waiting'
     // A game cannot be marked as started without the minimum number of players
-    const dbRes = await db.query("SELECT status from tables");
-    expect(dbRes.rows[0].status).toEqual("waiting");
+    expect(res.body.status).toBe("waiting");
 
     // Second login with same player to check that user cannot sit at same table twice
     await joinGame(players[0]);
