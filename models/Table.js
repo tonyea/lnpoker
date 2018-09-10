@@ -234,7 +234,7 @@ const newRound = async tableID => {
   );
   // all players at table
   const players = dbRes.rows;
-  console.log("players", players);
+  // console.log("players", players);
 
   // deck will contain 52 cards to start
   const deck = fillDeck();
@@ -269,7 +269,7 @@ const newRound = async tableID => {
   }
   const smallBlindPlayerID = players[smallBlindIndex].player_id;
   const bigBlindPlayerID = players[bigBlindIndex].player_id;
-  console.log("current player ", players[currentPlayerIndex]);
+  // console.log("current player ", players[currentPlayerIndex]);
   const currentPlayerID = players[currentPlayerIndex].player_id;
   // deduct small blind amount from small blind user
   await db.query(
@@ -505,7 +505,7 @@ const fold = async (userID, cb) => {
     );
     //set my bet field to 0, set talked to true and last action to fold
     const res = await db.query(
-      "UPDATE user_table SET talked=true, lastaction='fold', bet=0 where player_id = $1 returning * ",
+      "UPDATE user_table SET talked=true, lastaction='fold', roundbet=(bet+roundbet), bet=0 where player_id = $1 returning * ",
       [userID]
     );
     if (res.rows.length > 0) {
@@ -704,8 +704,10 @@ const progress = async userID => {
   const tableID = userTable[0].table_id;
   // if status of game is started then progress, else null
   if (status === "started") {
-    // only progress game if it is end of round
-    if ((await checkForEndOfRound(userID)) === true) {
+    // If only one player left unfolded, then he wins the pot
+    const notFolded = userTable.filter(player => player.lastaction !== "fold");
+    // only progress game if it is end of round or only one player left
+    if ((await checkForEndOfRound(userID)) === true || notFolded.length === 1) {
       // if current player is last player, first player is set as current player, else move current player 1 down the table.
       const currentPlayerIndex = userTable.findIndex(
         user => user.currentplayer === true
@@ -721,6 +723,20 @@ const progress = async userID => {
       //Move all bets to the pot
       await moveAllBetsToPot(userID);
 
+      if (notFolded.length === 1) {
+        await setRoundName("Showdown", userID);
+
+        // compile check for winner and check for bankrupt into one messages object and if it exists then return it
+        let endRoundMessage = {};
+        endRoundMessage.winner = await checkForWinner(userID);
+        endRoundMessage.bankrupt = await checkForBankrupt(userID);
+        if (
+          endRoundMessage.winner.length > 0 ||
+          endRoundMessage.bankrupt.length > 0
+        ) {
+          return endRoundMessage;
+        }
+      }
       if (roundname === "River") {
         await setRoundName("Showdown", userID);
         //Evaluate each hand
@@ -1068,6 +1084,7 @@ const checkForEndOfRound = async userID => {
     .then(res => {
       players = res.rows;
     });
+
   //For each player, check
   for (i = 0; i < players.length; i += 1) {
     // if player has not folded

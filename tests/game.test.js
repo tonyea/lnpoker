@@ -1116,6 +1116,63 @@ describe("Game Tests", () => {
   });
 
   // If only one player left unfolded, then he wins the pot
+  test("Only one player left unfolded", async () => {
+    // expect.assertions(10);
+    // login minimum number of players and have them join a game
+    await playersJoinGame();
+
+    // set current and non-current players
+    await setCurrentPlayer();
+
+    // get sum of bets
+    let totalBets;
+    await db
+      .query("SELECT SUM(bet) as bets FROM user_table")
+      .then(res => (totalBets = res.rows[0].bets));
+
+    // get current chips
+    let currentPlayerChips;
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", currentPlayer.token)
+      .send()
+      .then(
+        res =>
+          (currentPlayerChips = res.body.players.find(
+            player => player.username === currentPlayer.playerName
+          ).chips)
+      );
+
+    // expected total chips = bets + existing chips (- blind bets in next round)
+    const expectedTotalChips =
+      parseInt(totalBets) + parseInt(currentPlayerChips);
+
+    // make all players except 1 player fold
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", currentPlayer.token)
+      .send();
+
+    await request(app)
+      .post("/api/game/fold")
+      .set("Authorization", notCurrentPlayer.token)
+      .send();
+
+    // bets added to pot
+    // unfolded player doesn't need to do an action - end of round
+    // unfolded player checks his table and sees chips plus pot amount
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", currentPlayer.token)
+      .send()
+      .then(res =>
+        expect(
+          res.body.players.find(
+            player => player.username === currentPlayer.playerName
+          ).chips
+        ).toBe(expectedTotalChips)
+      );
+  });
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
