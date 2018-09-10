@@ -1118,6 +1118,8 @@ describe("Game Tests", () => {
     // add pending players
   });
 
+  // If only one player left unfolded, then he wins the pot
+
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
 
