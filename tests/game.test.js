@@ -134,7 +134,9 @@ describe("Game Tests", () => {
       isBigBlind: true,
       isSmallBlind: false,
       currentplayer: false,
-      lastaction: null
+      lastaction: null,
+      seated: true,
+      utid: expect.any(Number)
     });
   });
 
@@ -1079,7 +1081,7 @@ describe("Game Tests", () => {
     await new Promise(res =>
       setTimeout(() => {
         res();
-      }, 4000)
+      }, 3500)
     );
 
     await request(app)
@@ -1209,6 +1211,16 @@ describe("Game Tests", () => {
       expect(res.statusCode).toBe(200);
       // player 3 should see board
       expect(res.body.board.length).toBe(3);
+      // Only seated players get cycled for currentPlayer, SB, BB, dealer within round
+      const thirdplayer = res.body.players.find(
+        player => player.username === players[2].playerName
+      );
+      expect(thirdplayer.isSmallBlind).toBe(false);
+      expect(thirdplayer.isBigBlind).toBe(false);
+      expect(thirdplayer.currentplayer).toBe(false);
+      expect(thirdplayer.dealer).toBe(false);
+      // check that player 3 does not have any cards
+      expect(thirdplayer.cards).toEqual([]);
     });
 
     // check that player 3 cannot do any actions
@@ -1248,19 +1260,112 @@ describe("Game Tests", () => {
         expect(res.body.notallowed).toBe("Not yet seated");
       });
 
-    // Only seated players get cycled for currentPlayer within round
+    // cycle round to turn and check again - Only seated players get cycled for currentPlayer, SB, BB, dealer within round
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[0].token)
+      .send();
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        const thirdplayer = res.body.players.find(
+          player => player.username === players[2].playerName
+        );
+        expect(thirdplayer.isSmallBlind).toBe(false);
+        expect(thirdplayer.isBigBlind).toBe(false);
+        expect(thirdplayer.currentplayer).toBe(false);
+        expect(thirdplayer.dealer).toBe(false);
+      });
 
-    // check that player 3 does not have any cards
+    // cycle round to river and check again - Only seated players get cycled for currentPlayer, SB, BB, dealer within round
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[0].token)
+      .send();
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", players[1].token)
+      .send()
+      .then(res => {
+        const thirdplayer = res.body.players.find(
+          player => player.username === players[2].playerName
+        );
+        expect(thirdplayer.isSmallBlind).toBe(false);
+        expect(thirdplayer.isBigBlind).toBe(false);
+        expect(thirdplayer.currentplayer).toBe(false);
+        expect(thirdplayer.dealer).toBe(false);
+      });
 
     // finish round
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[0].token)
+      .send();
 
-    // check that player 3 has 2 cards
+      // wait 3 seconds
+      await new Promise(res =>
+        setTimeout(() => {
+          res();
+        }, 3500)
+      );
+    await request(app)
+      .post("/api/game/")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        const thirdplayer = res.body.players.find(
+          player => player.username === players[2].playerName
+        );
+        // third player should be small blind
+        expect(thirdplayer.isSmallBlind).toBe(true);
+        expect(thirdplayer.isBigBlind).toBe(false);
+        expect(thirdplayer.currentplayer).toBe(false);
+        expect(thirdplayer.dealer).toBe(false);
+        // check that player 3 has 2 cards
+        expect(thirdplayer.cards.length).toBe(2);
+      });
 
     // check that player 3 can do actions at his turn
-
-    // have player 3 win and verify that he got the pot
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[0].token)
+      .send();
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(200);
+        expect(res.body).toContain("Success");
+      })
 
     // More than maxplayers can't join
+    await db.query("UPDATE tables SET maxplayers = 3");
+    await joinGame(players[3])
+          .then(res => {
+            expect(res.statusCode).toBe(400);
+            expect(res.body).toContain("Maximum players alread seated.");
+          })
+
+
   });
 
   // test all in player against part in - same as above but player 2 has less than max bet

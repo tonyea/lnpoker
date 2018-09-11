@@ -135,45 +135,58 @@ const getPlayersAtTable = async (tableID, userID) => {
 
   const players = await db.query(
     `
-    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, (CASE WHEN ($3 IS TRUE) THEN cards ELSE null END) as cards
+    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, seated, (CASE WHEN ($3 IS TRUE) THEN cards ELSE null END) as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
     union
-    SELECT username, dealer, chips, talked, lastaction, bet, currentplayer, cards 
+    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, seated, cards 
     FROM users 
     INNER join user_table on users.id = user_table.player_id
-    WHERE user_table.table_id=$1 and player_id=$2`,
+    WHERE user_table.table_id=$1 and player_id=$2
+    ORDER BY utid
+    `,
     [tableID, userID, isShowdown]
   );
 
-  const playersArray = players.rows;
-  if (playersArray.length > 0) {
+  // only get blinds on seated players
+  let playersArray = [];
+  const unseatedPlayersArray = players.rows.filter(player => !player.seated);
+  const seatedPlayersArray = players.rows.filter(player => player.seated);
+  if (seatedPlayersArray.length > 0) {
     // First player after dealer is identified as small blind, next as big blind. So in 2 player game, p1 is dealer, p2 is sb, p1 is bb
     // default all to false
-    playersArray.map(player => {
+    seatedPlayersArray.map(player => {
       player.isSmallBlind = false;
       player.isBigBlind = false;
     });
-    const dealerIndex = playersArray.findIndex(
+    const dealerIndex = seatedPlayersArray.findIndex(
       player => player.dealer === true
     );
 
     //Identify Small and Big Blind player indexes
     let smallBlindIndex = dealerIndex + 1;
-    if (smallBlindIndex >= playersArray.length) {
+    if (smallBlindIndex >= seatedPlayersArray.length) {
       smallBlindIndex = 0;
     }
     let bigBlindIndex = dealerIndex + 2;
-    if (bigBlindIndex >= playersArray.length) {
-      bigBlindIndex -= playersArray.length;
+    if (bigBlindIndex >= seatedPlayersArray.length) {
+      bigBlindIndex -= seatedPlayersArray.length;
     }
-    playersArray[smallBlindIndex].isSmallBlind = true;
-    playersArray[bigBlindIndex].isBigBlind = true;
-    return playersArray;
+    seatedPlayersArray[smallBlindIndex].isSmallBlind = true;
+    seatedPlayersArray[bigBlindIndex].isBigBlind = true;
+
+    playersArray = playersArray.concat(seatedPlayersArray);
   }
-  // else return empty array
-  return [];
+  if (unseatedPlayersArray.length > 0) {
+    // default all to false
+    unseatedPlayersArray.map(player => {
+      player.isSmallBlind = false;
+      player.isBigBlind = false;
+    });
+    playersArray = playersArray.concat(unseatedPlayersArray);
+  }
+  return playersArray;
 };
 
 // @params tableID and userID
@@ -884,16 +897,7 @@ const checkForWinner = async userID => {
   maxRank = 0.0;
   for (k = 0; k < players.length; k += 1) {
     const rank = parseFloat(players[k].rank);
-    // console.log(
-    //   "rank",
-    //   rank,
-    //   "maxrank",
-    //   maxRank,
-    //   "players[k].lastaction",
-    //   players[k].lastaction,
-    //   "players[k].player_id",
-    //   players[k].player_id
-    // );
+    
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
     if (rank === maxRank && players[k].lastaction !== "fold") {
       // console.log("maxRank 1 ", maxRank);

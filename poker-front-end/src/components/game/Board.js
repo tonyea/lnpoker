@@ -33,7 +33,7 @@ const Board = props => {
       winnerNames.push(roundMessage.winner[key].playerName);
     }
     messageRows.push(
-      renderMessage(winnerNames.join(",") + " win the pot", messageRows.length)
+      renderMessage(winnerNames.join(", ") + " win the pot", messageRows.length)
     );
   }
   if (roundMessage.bankrupt && roundMessage.bankrupt.length === 1) {
