@@ -1102,7 +1102,7 @@ describe("Game Tests", () => {
         expect(resPlayers[0].talked).toBe(false);
         expect(resPlayers[1].lastaction).toBe(null);
         expect(resPlayers[1].talked).toBe(false);
-      });
+      }, 10000);
 
     // call new round
 
@@ -1201,7 +1201,6 @@ describe("Game Tests", () => {
       .set("Authorization", players[1].token)
       .send()
       .then(res => {
-        console.log(res.body);
         expect(res.body.board.length).toBe(3);
       });
 
@@ -1213,6 +1212,43 @@ describe("Game Tests", () => {
     });
 
     // check that player 3 cannot do any actions
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(400);
+        expect(res.body.notallowed).toBe("Not yet seated");
+      });
+
+    // await request(app)
+    //   .post("/api/game/check")
+    //   .set("Authorization", players[2].token)
+    //   .send()
+    //   .then(res => {
+    //     expect(res.statusCode).toBe(400);
+    //     expect(res.body.notallowed).toBe("Not yet seated");
+    //   });
+
+    // await request(app)
+    //   .post("/api/game/fold")
+    //   .set("Authorization", players[2].token)
+    //   .send()
+    //   .then(res => {
+    //     expect(res.statusCode).toBe(400);
+    //     expect(res.body.notallowed).toBe("Not yet seated");
+    //   });
+
+    // await request(app)
+    //   .post("/api/game/bet/10")
+    //   .set("Authorization", players[2].token)
+    //   .send()
+    //   .then(res => {
+    //     expect(res.statusCode).toBe(400);
+    //     expect(res.body.notallowed).toBe("Not yet seated");
+    //   });
+
+    // Only seated players get cycled for currentPlayer within round
 
     // check that player 3 does not have any cards
 

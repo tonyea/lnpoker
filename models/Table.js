@@ -102,7 +102,7 @@ const joinTable = async (tableID, userID) => {
 };
 
 // @desc - check if it is showdown
-// @params - tableID of table
+// @params - userID
 // returns bool
 const checkShowdown = async userID => {
   let isShowdown = await db
@@ -113,6 +113,17 @@ const checkShowdown = async userID => {
     .then(res => res.rows[0].roundname === "Showdown");
 
   return isShowdown;
+};
+
+// @desc - check if user is seated at table
+// @params - userID
+// returns bool
+const checkIfNotSeated = async userID => {
+  let isSeated = await db
+    .query("SELECT seated FROM user_table WHERE player_id = $1", [userID])
+    .then(res => res.rows[0].seated);
+
+  return !isSeated;
 };
 
 // @params tableID, userID
@@ -227,9 +238,14 @@ const exitTable = async userID => {
 // @params - tableID
 // returns null
 const newRound = async tableID => {
+  // Add players in waiting list
+  await db.query("UPDATE user_table SET seated = true WHERE table_id = $1", [
+    tableID
+  ]);
+
   // get all players at table
   const dbRes = await db.query(
-    "SELECT player_id, dealer from user_table where table_id = $1 order by id",
+    "SELECT player_id, dealer from user_table where table_id = $1 AND seated=true order by id",
     [tableID]
   );
   // all players at table
@@ -449,7 +465,7 @@ const check = async (userID, cb) => {
     const otherBetsRes = await db.query(
       `SELECT player_id, bet 
         FROM user_table 
-        WHERE bet > (SELECT bet from user_table WHERE player_id = $1) AND table_id = (SELECT table_id from user_table WHERE player_id = $1)`,
+        WHERE bet > (SELECT bet from user_table WHERE player_id = $1) AND table_id = (SELECT table_id from user_table WHERE player_id = $1) AND seated=true`,
       [userID]
     );
     if (otherBetsRes.rows.length > 0) {
@@ -486,6 +502,14 @@ const fold = async (userID, cb) => {
     await checkShowdown(userID).then(res => {
       if (res) {
         errors.notallowed = "No moves allowed after showdown";
+        return cb(errors, null);
+      }
+    });
+
+    // Do not allow action if not seated at table
+    await checkIfNotSeated(userID).then(res => {
+      if (res) {
+        errors.notallowed = "Not yet seated";
         return cb(errors, null);
       }
     });
@@ -632,19 +656,25 @@ const call = async (userID, cb) => {
   const errors = {};
   try {
     // Disable all actions on showdown
-    await checkShowdown(userID).then(res => {
-      if (res) {
-        errors.notallowed = "No moves allowed after showdown";
-        return cb(errors, null);
-      }
-    });
+    const isShowdown = await checkShowdown(userID);
+    if (isShowdown) {
+      errors.notallowed = "No moves allowed after showdown";
+      throw errors;
+    }
+
+    // Do not allow action if not seated at table
+    const isNotSeated = await checkIfNotSeated(userID);
+    if (isNotSeated) {
+      errors.notallowed = "Not yet seated";
+      throw errors;
+    }
 
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
       // return error if not
       errors.notallowed = "Wrong user has made a move";
-      return cb(errors, null);
+      throw errors;
     }
 
     const maxBet = await getMaxBet(userID);
@@ -670,15 +700,15 @@ const call = async (userID, cb) => {
     return cb(null, await progress(userID));
     //Attemp to progress the game
   } catch (e) {
-    errors.notallowed = "Bet not allowed, replay please";
-    return cb(errors, null);
+    // errors.notallowed = "Bet not allowed, replay please";
+    return cb(e, null);
   }
 };
 
 const getGame = async userID => {
   const res = await db.query(
     `
-    SELECT user_table.id as id, username, currentplayer, bet, cards, player_id, table_id, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
+    SELECT user_table.id as id, username, currentplayer, bet, cards, player_id, table_id, seated, status, roundname, board, lastaction, rank, rankname, roundbet, chips  
     FROM user_table 
     INNER JOIN TABLES
     ON user_table.table_id = tables.id
@@ -687,7 +717,8 @@ const getGame = async userID => {
     WHERE table_id = (SELECT table_id 
       FROM user_table
       WHERE player_id = $1)
-      ORDER BY user_table.id;
+    AND seated=true
+    ORDER BY user_table.id;
       `,
     [userID]
   );
@@ -1039,7 +1070,7 @@ const moveAllBetsToPot = async userID => {
               SELECT table_id 
               FROM user_table
               WHERE player_id = $1
-          )
+          ) AND seated=true
       )
     WHERE id = (
         SELECT table_id 
@@ -1059,7 +1090,7 @@ const moveAllBetsToPot = async userID => {
         SELECT table_id 
         FROM user_table
         WHERE player_id = $1
-    )      
+    ) AND seated = true      
   `,
     [userID]
   );
@@ -1078,6 +1109,7 @@ const checkForEndOfRound = async userID => {
       WHERE table_id = (SELECT table_id 
                         FROM user_table
                         WHERE player_id = $1)
+      AND seated = true
                 `,
       [userID]
     )
@@ -1108,7 +1140,7 @@ const checkForEndOfRound = async userID => {
 // returns bool
 const checkTurn = async userID => {
   const res = await db.query(
-    "SELECT id, currentplayer FROM user_table WHERE user_table.player_id = $1",
+    "SELECT id, currentplayer FROM user_table WHERE player_id = $1",
     [userID]
   );
 
