@@ -1,45 +1,48 @@
 import React from "react";
 import Card from "./Card";
 
-export default ({ playerInfo, disabledstate }) => (
-  <div
-    className={
-      playerInfo.currentplayer && !disabledstate
-        ? "col-sm text-sm-center current-player"
-        : "col-sm text-sm-center"
-    }
-  >
-    <div className="card text-center">
-      <div className="card-header">{playerInfo.username}</div>
-      <div className="card-body">
-        <h5 className="card-title">
-          {playerInfo.currentplayer && !disabledstate ? (
-            <div>Thinking</div>
-          ) : (
-            <div>Waiting</div>
-          )}
-        </h5>
-        <div className="tokens row mb-2">
-          {playerInfo.dealer ? (
-            <div className="card-text tokens-d">D</div>
-          ) : null}
+export default ({ playerInfo, disabledstate }) => {
+  // show animation on current player. if player is unseated then show him transparent
+  let myclass, mydiv;
+  if (playerInfo.currentplayer && !disabledstate) {
+    myclass = "col-sm text-sm-center current-player";
+    mydiv = <div>Thinking</div>;
+  } else if (!playerInfo.seated) {
+    myclass = "col-sm text-sm-center player-transparent";
+    mydiv = <div>To be seated</div>;
+  } else {
+    myclass = "col-sm text-sm-center";
+    mydiv = <div>Waiting</div>;
+  }
 
-          {playerInfo.isSmallBlind ? (
-            <div className="card-text tokens-sb">SB</div>
-          ) : null}
+  return (
+    <div className={myclass}>
+      <div className="card text-center">
+        <div className="card-header">{playerInfo.username}</div>
+        <div className="card-body">
+          <h5 className="card-title">{mydiv}</h5>
+          <div className="tokens row mb-2">
+            {playerInfo.dealer ? (
+              <div className="card-text tokens-d">D</div>
+            ) : null}
 
-          {playerInfo.isBigBlind ? (
-            <div className="card-text tokens-bb">BB</div>
+            {playerInfo.isSmallBlind ? (
+              <div className="card-text tokens-sb">SB</div>
+            ) : null}
+
+            {playerInfo.isBigBlind ? (
+              <div className="card-text tokens-bb">BB</div>
+            ) : null}
+          </div>
+          {playerInfo.cards ? (
+            <div className="opponent-cards row">
+              <Card card={playerInfo.cards[0]} className="col-sm" />
+              <Card card={playerInfo.cards[1]} className="col-sm" />
+            </div>
           ) : null}
         </div>
-        {playerInfo.cards ? (
-          <div className="opponent-cards row">
-            <Card card={playerInfo.cards[0]} className="col-sm" />
-            <Card card={playerInfo.cards[1]} className="col-sm" />
-          </div>
-        ) : null}
+        <div className="card-footer text-muted">{playerInfo.chips} Sats</div>
       </div>
-      <div className="card-footer text-muted">{playerInfo.chips} Sats</div>
     </div>
-  </div>
-);
+  );
+};

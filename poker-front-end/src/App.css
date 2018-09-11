@@ -31,6 +31,10 @@ body {
   max-width: 200px;
 }
 
+.player-transparent {
+  opacity: 0.5;
+}
+
 .deck-row {
   background-color: darkolivegreen;
   justify-content: space-around;
