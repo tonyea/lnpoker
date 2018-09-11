@@ -221,8 +221,8 @@ const joinTableIfItExists = async (cb, userID) => {
     table.status = "started";
 
     table.players = await getPlayersAtTable(table.id, userID);
-  } catch (error) {
-    return cb(error);
+  } catch (e) {
+    return cb(e, null);
   }
   return cb(null, table);
 };
@@ -445,19 +445,25 @@ const check = async (userID, cb) => {
   const errors = {};
   try {
     // Disable all actions on showdown
-    await checkShowdown(userID).then(res => {
-      if (res) {
-        errors.notallowed = "No moves allowed after showdown";
-        return cb(errors, null);
-      }
-    });
+    const isShowdown = await checkShowdown(userID);
+    if (isShowdown) {
+      errors.notallowed = "No moves allowed after showdown";
+      throw errors;
+    }
+
+    // Do not allow action if not seated at table
+    const isNotSeated = await checkIfNotSeated(userID);
+    if (isNotSeated) {
+      errors.notallowed = "Not yet seated";
+      throw errors;
+    }
 
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
       // return error if not
       errors.notallowed = "Wrong user has made a move";
-      return cb(errors, null);
+      throw errors;
     }
 
     // check that the person requesting the check is allowed to check
@@ -470,7 +476,7 @@ const check = async (userID, cb) => {
     );
     if (otherBetsRes.rows.length > 0) {
       errors.notallowed = "Check not allowed, replay please";
-      return cb(errors, null);
+      throw errors;
     }
 
     const res = await db.query(
@@ -482,11 +488,9 @@ const check = async (userID, cb) => {
       return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
-    return cb(errors, null);
+    throw errors;
   } catch (e) {
-    errors.notallowed = "Check not allowed, replay please";
-    console.log(e);
-    return cb(errors, null);
+    return cb(e, null);
   }
 
   // progress the table
@@ -499,27 +503,25 @@ const fold = async (userID, cb) => {
   const errors = {};
   try {
     // Disable all actions on showdown
-    await checkShowdown(userID).then(res => {
-      if (res) {
-        errors.notallowed = "No moves allowed after showdown";
-        return cb(errors, null);
-      }
-    });
+    const isShowdown = await checkShowdown(userID);
+    if (isShowdown) {
+      errors.notallowed = "No moves allowed after showdown";
+      throw errors;
+    }
 
     // Do not allow action if not seated at table
-    await checkIfNotSeated(userID).then(res => {
-      if (res) {
-        errors.notallowed = "Not yet seated";
-        return cb(errors, null);
-      }
-    });
+    const isNotSeated = await checkIfNotSeated(userID);
+    if (isNotSeated) {
+      errors.notallowed = "Not yet seated";
+      throw errors;
+    }
 
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
       // return error if not
       errors.notallowed = "Wrong user has made a move";
-      return cb(errors, null);
+      throw errors;
     }
 
     // add my bet to the pot
@@ -537,13 +539,12 @@ const fold = async (userID, cb) => {
       return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
-    return cb(errors, null);
+    throw errors;
 
     //Attemp to progress the game
     // progress(this.table);
   } catch (e) {
-    errors.notallowed = "Fold not allowed, replay please";
-    return cb(errors, null);
+    return cb(e, null);
   }
 };
 
@@ -554,19 +555,25 @@ const bet = async (userID, betAmount, cb) => {
   const errors = {};
   try {
     // Disable all actions on showdown
-    await checkShowdown(userID).then(res => {
-      if (res) {
-        errors.notallowed = "No moves allowed after showdown";
-        return cb(errors, null);
-      }
-    });
+    const isShowdown = await checkShowdown(userID);
+    if (isShowdown) {
+      errors.notallowed = "No moves allowed after showdown";
+      throw errors;
+    }
+
+    // Do not allow action if not seated at table
+    const isNotSeated = await checkIfNotSeated(userID);
+    if (isNotSeated) {
+      errors.notallowed = "Not yet seated";
+      throw errors;
+    }
 
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
       // return error if not
       errors.notallowed = "Wrong user has made a move";
-      return cb(errors, null);
+      throw errors;
     }
 
     // see if I have sufficient number of chips. show error if I don't
@@ -589,8 +596,7 @@ const bet = async (userID, betAmount, cb) => {
     // if progress returns an object then return it to the callback
     return cb(null, await progress(userID));
   } catch (e) {
-    errors.notallowed = "Bet not allowed, replay please";
-    return cb(errors, null);
+    return cb(e, null);
   }
 };
 
@@ -598,19 +604,25 @@ const allin = async (userID, cb) => {
   const errors = {};
   try {
     // Disable all actions on showdown
-    await checkShowdown(userID).then(res => {
-      if (res) {
-        errors.notallowed = "No moves allowed after showdown";
-        return cb(errors, null);
-      }
-    });
+    const isShowdown = await checkShowdown(userID);
+    if (isShowdown) {
+      errors.notallowed = "No moves allowed after showdown";
+      throw errors;
+    }
+
+    // Do not allow action if not seated at table
+    const isNotSeated = await checkIfNotSeated(userID);
+    if (isNotSeated) {
+      errors.notallowed = "Not yet seated";
+      throw errors;
+    }
 
     // check if it is my turn
     const myTurn = await checkTurn(userID);
     if (!myTurn) {
       // return error if not
       errors.notallowed = "Wrong user has made a move";
-      return cb(errors, null);
+      throw errors;
     }
 
     // see if I have sufficient number of chips. show error if I don't
@@ -622,7 +634,7 @@ const allin = async (userID, cb) => {
 
     if (totalChips < 1) {
       errors.notallowed = "Can't bet more than number of chips owned.";
-      return cb(errors, null);
+      throw errors;
     }
 
     // add chips to my bet, remove from chips, set talked = true
@@ -635,8 +647,7 @@ const allin = async (userID, cb) => {
     await progress(userID);
     return cb(null, "All In");
   } catch (e) {
-    errors.notallowed = "Bet not allowed, replay please";
-    return cb(errors, null);
+    return cb(e, null);
   }
 };
 

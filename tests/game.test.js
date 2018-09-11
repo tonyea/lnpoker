@@ -1221,32 +1221,32 @@ describe("Game Tests", () => {
         expect(res.body.notallowed).toBe("Not yet seated");
       });
 
-    // await request(app)
-    //   .post("/api/game/check")
-    //   .set("Authorization", players[2].token)
-    //   .send()
-    //   .then(res => {
-    //     expect(res.statusCode).toBe(400);
-    //     expect(res.body.notallowed).toBe("Not yet seated");
-    //   });
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(400);
+        expect(res.body.notallowed).toBe("Not yet seated");
+      });
 
-    // await request(app)
-    //   .post("/api/game/fold")
-    //   .set("Authorization", players[2].token)
-    //   .send()
-    //   .then(res => {
-    //     expect(res.statusCode).toBe(400);
-    //     expect(res.body.notallowed).toBe("Not yet seated");
-    //   });
+    await request(app)
+      .post("/api/game/fold")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(400);
+        expect(res.body.notallowed).toBe("Not yet seated");
+      });
 
-    // await request(app)
-    //   .post("/api/game/bet/10")
-    //   .set("Authorization", players[2].token)
-    //   .send()
-    //   .then(res => {
-    //     expect(res.statusCode).toBe(400);
-    //     expect(res.body.notallowed).toBe("Not yet seated");
-    //   });
+    await request(app)
+      .post("/api/game/bet/10")
+      .set("Authorization", players[2].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(400);
+        expect(res.body.notallowed).toBe("Not yet seated");
+      });
 
     // Only seated players get cycled for currentPlayer within round
 
