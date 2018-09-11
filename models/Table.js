@@ -48,43 +48,51 @@ const buyIn = async (userID, tableID) => {
 // @return null
 // @desc add user's id to user_table and distribute his cards from deck
 const joinTable = async (tableID, userID) => {
-  const errors = {};
+  // if max users are already seated then throw error
+  let minplayers, maxplayers, numplayers;
+  await db
+    .query("SELECT minplayers, maxplayers from tables where id = $1", [tableID])
+    .then(res => {
+      minplayers = parseInt(res.rows[0].minplayers);
+      maxplayers = parseInt(res.rows[0].maxplayers);
+    });
+
+  await db
+    .query(
+      "SELECT count(id) as numplayers from user_table where table_id = $1",
+      [tableID]
+    )
+    .then(res => {
+      numplayers = res.rows.length > 0 ? parseInt(res.rows[0].numplayers) : 0;
+    });
+
+  if (numplayers === maxplayers) {
+    throw "Maximum players alread seated.";
+  }
 
   const buyin = await buyIn(userID, tableID);
 
-  // append user id to table along with chips from bank | auto join the table you create
-  await db.query(
-    "INSERT INTO user_table(player_id, table_id, chips) VALUES ($1, $2, $3)",
-    [userID, tableID, buyin]
-  );
+  // append user id to table along with chips from bank, increment numplayers | auto join the table you create
+  await db
+    .query(
+      "INSERT INTO user_table(player_id, table_id, chips) VALUES ($1, $2, $3)",
+      [userID, tableID, buyin]
+    )
+    .then(() => numplayers++);
 
   //If there is no current game and we have enough players, start a new game. Set status to started
-  const tableRow = await db.query(
-    "SELECT status, minplayers from tables where id = $1",
-    [tableID]
-  );
-  const playersRows = await db.query(
-    "SELECT count(id) as numplayers from user_table where table_id = $1",
-    [tableID]
-  );
-
-  const minPlayers =
-    tableRow.rows.length > 0 ? tableRow.rows[0].minplayers : null;
-  const numPlayers =
-    playersRows.rows.length > 0 ? parseInt(playersRows.rows[0].numplayers) : 0;
-  // return error if we don't find table
-  if (minPlayers === null) {
-    errors.table = "No table found";
-    throw errors;
-  }
   // check if we have minimum number of players
-  if (numPlayers < minPlayers) {
+  if (numplayers < minplayers) {
     return;
-    // errors.players = "Not enough players";
-    // throw errors;
   }
   // start new round if status is 'waiting'
-  if (tableRow.rows[0].status === "waiting") {
+  let status;
+  await db
+    .query("SELECT status from tables where id = $1", [tableID])
+    .then(res => {
+      status = res.rows[0].status;
+    });
+  if (status === "waiting") {
     // First user at table is identified as dealer and everyone else is not a dealer by default. Will cycle dealer each round
     await db.query(
       "UPDATE user_table SET dealer = true WHERE table_id=$1 and id=(SELECT id FROM user_table WHERE table_id=$1 ORDER BY id LIMIT 1)",
@@ -897,7 +905,7 @@ const checkForWinner = async userID => {
   maxRank = 0.0;
   for (k = 0; k < players.length; k += 1) {
     const rank = parseFloat(players[k].rank);
-    
+
     // max rank is initially 0, so no player will trigger the first if. Will start by checking second player's rank against maxrank
     if (rank === maxRank && players[k].lastaction !== "fold") {
       // console.log("maxRank 1 ", maxRank);

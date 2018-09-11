@@ -1182,7 +1182,7 @@ describe("Game Tests", () => {
 
   // User joins a game mid round
   test("User joins a game mid round", async () => {
-    // expect.assertions(10);
+    expect.assertions(33);
     // login minimum number of players - 2 - and have them join a game
     await playersJoinGame();
 
@@ -1316,12 +1316,12 @@ describe("Game Tests", () => {
       .set("Authorization", players[0].token)
       .send();
 
-      // wait 3 seconds
-      await new Promise(res =>
-        setTimeout(() => {
-          res();
-        }, 3500)
-      );
+    // wait 3 seconds
+    await new Promise(res =>
+      setTimeout(() => {
+        res();
+      }, 3500)
+    );
     await request(app)
       .post("/api/game/")
       .set("Authorization", players[2].token)
@@ -1355,17 +1355,14 @@ describe("Game Tests", () => {
       .then(res => {
         expect(res.statusCode).toBe(200);
         expect(res.body).toContain("Success");
-      })
+      });
 
     // More than maxplayers can't join
     await db.query("UPDATE tables SET maxplayers = 3");
-    await joinGame(players[3])
-          .then(res => {
-            expect(res.statusCode).toBe(400);
-            expect(res.body).toContain("Maximum players alread seated.");
-          })
-
-
+    await joinGame(players[3]).then(res => {
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toContain("Maximum players alread seated.");
+    });
   });
 
   // test all in player against part in - same as above but player 2 has less than max bet
