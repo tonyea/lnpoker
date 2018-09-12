@@ -63,75 +63,84 @@ describe("Game Tests", () => {
     player.token = res.body.token;
   };
 
-  test("Guest cannot create a new game", async () => {
-    expect.assertions(1);
-
-    const res = await request(app)
-      .post("/api/game")
-      .send();
-
-    // check to see if response is unauthorized
-    expect(res.statusCode).toBe(401);
-  });
-
-  const joinGame = async player => {
+  const joinGame = async (player, tableID) => {
     return await request(app)
-      .post("/api/game")
+      .post("/api/game/join/" + tableID)
       .set("Authorization", player.token)
       .send();
   };
 
-  test("User creates a new table with min buy in", async () => {
+  const createGame = async (player, buyin) => {
+    return await request(app)
+      .post("/api/game/create/" + buyin)
+      .set("Authorization", player.token)
+      .send();
+  };
+
+  test("Guest cannot create a new game or join a game", async () => {
+    expect.assertions(2);
+
     // test that create route is gated
     await request(app)
       .post("/api/game/create/999999")
       .send()
       .then(res => expect(res.statusCode).toBe(401));
 
-    // test that a table was created with buy in of 999999
-    await request(app)
-      .post("/api/game/create/999999")
-      .set("Authorization", players[0].token)
-      .send()
-      .then(res => {
-        expect(res.body.minbuyin).toBe(999999);
-      });
+    let tableID;
 
-    // creating table again throws error
+    await createGame(players[0], 222222).then(res => (tableID = res.body.id));
+
+    // test that join route is gated
     await request(app)
-      .post("/api/game/create/999999")
-      .set("Authorization", players[0].token)
+      .post("/api/game/join/" + tableID)
       .send()
-      .then(res => {
-        expect(res.statusCode).toBe(400);
-        expect(res.body).toContain("Already playing at another table");
-      });
+      .then(res => expect(res.statusCode).toBe(401));
   });
 
-  // test("User logs in, gets seated at a table", async () => {
-  //   expect.assertions(4);
+  test("User creates a new table with min buy in", async () => {
+    expect.assertions(4);
 
-  //   const res = await joinGame(players[0]);
+    // test that a table was created with buy in of 999999
+    await createGame(players[0], 999999).then(res => {
+      expect(res.body.minbuyin).toBe(999999);
+      // If I am the first player at a table, I see a sign saying that the table is waiting for more players. The state of the game in the DB is 'waiting'. A game cannot be marked as started without the minimum number of players
+      expect(res.body.status).toBe("waiting");
+    });
 
-  //   // check to see if response is error. User sees waiting warning if first at table
-  //   expect(res.statusCode).toBe(200);
-  //   // If I am the first player at a table, I see a sign saying that the table is waiting for more players
-  //   // The state of the game in the DB is 'waiting'
-  //   // A game cannot be marked as started without the minimum number of players
-  //   expect(res.body.status).toBe("waiting");
+    // creating table again throws error
+    await createGame(players[0], 44444).then(res => {
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toContain("Already playing at another table");
+    });
+  });
 
-  //   // Second login with same player to check that user cannot sit at same table twice
-  //   await joinGame(players[0]);
+  test("User logs in, joins a table", async () => {
+    expect.assertions(6);
 
-  //   const dbres1 = await db.query(
-  //     "SELECT username from user_table INNER JOIN users on users.id = user_table.player_id WHERE users.username =$1",
-  //     [players[0].playerName]
-  //   );
-  //   expect(dbres1.rows[0].username).toEqual(players[0].playerName);
+    let tableID;
 
-  //   // User cannot sit at same table twice
-  //   expect(dbres1.rows.length).toBe(1);
-  // });
+    // create a game with player 1
+    await createGame(players[0], 100000).then(res => (tableID = res.body.id));
+
+    // join game as player 2
+    await joinGame(players[1], tableID).then(res => {
+      expect(res.statusCode).toBe(200);
+      expect(res.body.minbuyin).toBe(100000);
+    });
+
+    // Second login with same player to check that user cannot sit at same table twice
+    await joinGame(players[0], tableID).then(res => {
+      expect(res.statusCode).toBe(200);
+      expect(res.body.minbuyin).toBe(100000);
+      expect(res.body.id).toBe(tableID);
+    });
+    await joinGame(players[1], tableID);
+    await db
+      .query("SELECT count(id) as playercount FROM user_table")
+      .then(dbres => {
+        expect(parseInt(dbres.rows[0].playercount)).toBe(2);
+      });
+  });
 
   // // I can see other player's info once I join a table. I cannot see their cards.
   // test("User can see basic info about other players", async () => {

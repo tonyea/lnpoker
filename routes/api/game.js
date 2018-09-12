@@ -4,6 +4,7 @@ const router = new Router();
 const {
   joinTableIfItExists,
   createNewTable,
+  joinTable,
   check,
   fold,
   bet,
@@ -43,12 +44,21 @@ router.post(
   "/create/:buyin",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    console.log("buy in", req.params.buyin);
-
+    console.log("buyin", req.params.buyin);
     createNewTable(req.user.id, req.params.buyin, returnResult(req, res));
   }
 );
 
+// @route   POST api/game/:tableID
+// @desc    Join table with specified ID
+// @access  Private
+router.post(
+  "/join/:tableID",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    joinTable(req.params.tableID, req.user.id, returnResult(req, res));
+  }
+);
 // @route   POST api/game/check
 // @desc    User action check
 // @access  Private

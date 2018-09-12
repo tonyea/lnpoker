@@ -1,16 +1,17 @@
 const db = require("../db");
 const { rankHandInt } = require("./Rank");
 
-// @params NA
+// @params tableID
 // @return table if already created, else false
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
-const findTable = async () => {
+const findTable = async tableID => {
   const { rows } = await db.query(
-    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status FROM tables limit 1"
+    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status FROM tables WHERE id = $1",
+    [tableID]
   );
 
   if (rows.length < 1) {
-    return false;
+    throw "Table not found";
   }
 
   return rows[0];
@@ -20,20 +21,21 @@ const findTable = async () => {
 // @return table object without players array
 // @desc create a new table using default params instead of destructuring table arguments, start new round
 const createNewTable = async (userID, buyin, cb) => {
+  let tableID;
   try {
     if (await isPlayerOnTable(userID)) {
       throw "Already playing at another table";
     }
 
-    const res = await db.query(
-      "INSERT INTO tables (minbuyin) VALUES ($1) returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status ",
-      [buyin]
-    );
+    await db
+      .query(
+        "INSERT INTO tables (minbuyin) VALUES ($1) returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status ",
+        [buyin]
+      )
+      .then(res => (tableID = res.rows[0].id));
 
     // auto join newly created table
-    await joinTable(res.rows[0].id, userID);
-
-    return cb(null, res.rows[0]);
+    await joinTable(tableID, userID, cb);
   } catch (e) {
     return cb(e, null);
   }
@@ -53,68 +55,81 @@ const buyIn = async (userID, tableID) => {
   return buyIn;
 };
 
-// @params tableID and userID
-// @return null
+// @params tableID, userID and cb
+// @return cb with table object or error
 // @desc add user's id to user_table and distribute his cards from deck
-const joinTable = async (tableID, userID) => {
-  // if max users are already seated then throw error
-  let minplayers, maxplayers, numplayers;
-  await db
-    .query("SELECT minplayers, maxplayers from tables where id = $1", [tableID])
-    .then(res => {
-      minplayers = parseInt(res.rows[0].minplayers);
-      maxplayers = parseInt(res.rows[0].maxplayers);
-    });
+const joinTable = async (tableID, userID, cb) => {
+  let table;
+  try {
+    const alreadyAtTable = await isPlayerOnTable(userID);
+    if (alreadyAtTable) {
+      // we're using alreadyAtTable (tableid) because it might be different from the one the user is trying to join. i.e. If the user tries to join a second table, he is returned to his first
+      table = await findTable(alreadyAtTable);
+      table.players = await getPlayersAtTable(alreadyAtTable, userID);
+      return cb(null, table);
+    }
+    // if max users are already seated then throw error
+    let minplayers, maxplayers, numplayers;
+    table = await findTable(tableID);
+    minplayers = parseInt(table.minplayers);
+    maxplayers = parseInt(table.maxplayers);
 
-  await db
-    .query(
-      "SELECT count(id) as numplayers from user_table where table_id = $1",
-      [tableID]
-    )
-    .then(res => {
-      numplayers = res.rows.length > 0 ? parseInt(res.rows[0].numplayers) : 0;
-    });
+    await db
+      .query(
+        "SELECT count(id) as numplayers from user_table where table_id = $1",
+        [tableID]
+      )
+      .then(res => {
+        numplayers = res.rows.length > 0 ? parseInt(res.rows[0].numplayers) : 0;
+      });
+    if (numplayers === maxplayers) {
+      throw "Maximum players alread seated.";
+    }
 
-  if (numplayers === maxplayers) {
-    throw "Maximum players alread seated.";
-  }
+    // force user to buy in to table amount
+    const buyin = await buyIn(userID, tableID);
 
-  const buyin = await buyIn(userID, tableID);
+    // append user id to table along with chips from bank, increment numplayers | auto join the table you create
+    await db
+      .query(
+        "INSERT INTO user_table(player_id, table_id, chips) VALUES ($1, $2, $3)",
+        [userID, tableID, buyin]
+      )
+      .then(() => numplayers++);
 
-  // append user id to table along with chips from bank, increment numplayers | auto join the table you create
-  await db
-    .query(
-      "INSERT INTO user_table(player_id, table_id, chips) VALUES ($1, $2, $3)",
-      [userID, tableID, buyin]
-    )
-    .then(() => numplayers++);
+    //If there is no current game and we have enough players, start a new game. Set status to started
+    // check if we have minimum number of players
+    if (numplayers < minplayers) {
+      table.players = await getPlayersAtTable(table.id, userID);
+      return cb(null, table);
+    }
 
-  //If there is no current game and we have enough players, start a new game. Set status to started
-  // check if we have minimum number of players
-  if (numplayers < minplayers) {
-    return;
-  }
-  // start new round if status is 'waiting'
-  let status;
-  await db
-    .query("SELECT status from tables where id = $1", [tableID])
-    .then(res => {
-      status = res.rows[0].status;
-    });
-  if (status === "waiting") {
-    // First user at table is identified as dealer and everyone else is not a dealer by default. Will cycle dealer each round
-    await db.query(
-      "UPDATE user_table SET dealer = true WHERE table_id=$1 and id=(SELECT id FROM user_table WHERE table_id=$1 ORDER BY id LIMIT 1)",
-      [tableID]
-    );
+    // start new round if status is 'waiting'
+    let status;
+    await db
+      .query("SELECT status from tables where id = $1", [tableID])
+      .then(res => {
+        status = res.rows[0].status;
+      });
+    if (status === "waiting") {
+      // First user at table is identified as dealer and everyone else is not a dealer by default. Will cycle dealer each round
+      await db.query(
+        "UPDATE user_table SET dealer = true WHERE table_id=$1 and id=(SELECT id FROM user_table WHERE table_id=$1 ORDER BY id LIMIT 1)",
+        [tableID]
+      );
+      // start a new round
+      await newRound(tableID);
 
-    // start a new round
-    await newRound(tableID);
+      // set table status to started
+      await db.query("UPDATE tables SET status = 'started' where id = $1", [
+        tableID
+      ]);
 
-    // set table status to started
-    await db.query("UPDATE tables SET status = 'started' where id = $1", [
-      tableID
-    ]);
+      table.players = await getPlayersAtTable(table.id, userID);
+      return cb(null, table);
+    }
+  } catch (e) {
+    return cb(e, null);
   }
 };
 
@@ -207,16 +222,16 @@ const getPlayersAtTable = async (tableID, userID) => {
 };
 
 // @params userID
-// @return bool
+// @return bool or tableID
 // @desc return true if user is found on any table, else false
 const isPlayerOnTable = async userID => {
   const result = await db.query(
-    "SELECT id FROM user_table WHERE player_id = $1",
+    "SELECT table_id FROM user_table WHERE player_id = $1",
     [userID]
   );
 
   if (result.rows.length > 0) {
-    return true;
+    return result.rows[0].table_id;
   }
 
   return false;
@@ -251,10 +266,11 @@ const joinTableIfItExists = async (cb, userID) => {
     table.status = "started";
 
     table.players = await getPlayersAtTable(table.id, userID);
+
+    return cb(null, table);
   } catch (e) {
     return cb(e, null);
   }
-  return cb(null, table);
 };
 
 // @desc - join existing table
@@ -1187,6 +1203,7 @@ const checkTurn = async userID => {
 module.exports = {
   joinTableIfItExists,
   createNewTable,
+  joinTable,
   exitTable,
   check,
   fold,
