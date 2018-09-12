@@ -19,15 +19,24 @@ const findTable = async () => {
 // @params NA
 // @return table object without players array
 // @desc create a new table using default params instead of destructuring table arguments, start new round
-const createNewTable = async userID => {
-  const res = await db.query(
-    "INSERT INTO tables DEFAULT VALUES returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status "
-  );
+const createNewTable = async (userID, buyin, cb) => {
+  try {
+    if (await isPlayerOnTable(userID)) {
+      throw "Already playing at another table";
+    }
 
-  // auto join newly created table
-  await joinTable(res.rows[0].id, userID);
+    const res = await db.query(
+      "INSERT INTO tables (minbuyin) VALUES ($1) returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status ",
+      [buyin]
+    );
 
-  return res.rows[0];
+    // auto join newly created table
+    await joinTable(res.rows[0].id, userID);
+
+    return cb(null, res.rows[0]);
+  } catch (e) {
+    return cb(e, null);
+  }
 };
 
 const buyIn = async (userID, tableID) => {
@@ -197,13 +206,13 @@ const getPlayersAtTable = async (tableID, userID) => {
   return playersArray;
 };
 
-// @params tableID and userID
+// @params userID
 // @return bool
-// @desc return true if user is found on table, else false
-const isPlayerOnTable = async (userID, tableID) => {
+// @desc return true if user is found on any table, else false
+const isPlayerOnTable = async userID => {
   const result = await db.query(
-    "SELECT username FROM users INNER join user_table on users.id = user_table.player_id WHERE user_table.player_id = $1 and user_table.table_id = $2",
-    [userID, tableID]
+    "SELECT id FROM user_table WHERE player_id = $1",
+    [userID]
   );
 
   if (result.rows.length > 0) {
@@ -230,7 +239,7 @@ const joinTableIfItExists = async (cb, userID) => {
     }
 
     // return table if player is already on table
-    if (await isPlayerOnTable(userID, table.id)) {
+    if (await isPlayerOnTable(userID)) {
       table.players = await getPlayersAtTable(table.id, userID);
       return cb(null, table);
     }
@@ -1177,6 +1186,7 @@ const checkTurn = async userID => {
 
 module.exports = {
   joinTableIfItExists,
+  createNewTable,
   exitTable,
   check,
   fold,

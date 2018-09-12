@@ -3,6 +3,7 @@ const Router = require("express-promise-router");
 const router = new Router();
 const {
   joinTableIfItExists,
+  createNewTable,
   check,
   fold,
   bet,
@@ -35,7 +36,20 @@ router.post(
   }
 );
 
-// @route   POST api/game/:tableid/check
+// @route   POST api/game/create/:buyin
+// @desc    Create a new table if user hasn't already created / joined another table and persist to DB
+// @access  Private
+router.post(
+  "/create/:buyin",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    console.log("buy in", req.params.buyin);
+
+    createNewTable(req.user.id, req.params.buyin, returnResult(req, res));
+  }
+);
+
+// @route   POST api/game/check
 // @desc    User action check
 // @access  Private
 router.post(
