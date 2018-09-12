@@ -2,7 +2,7 @@ const passport = require("passport");
 const Router = require("express-promise-router");
 const router = new Router();
 const {
-  joinTableIfItExists,
+  getTable,
   createNewTable,
   joinTable,
   check,
@@ -14,26 +14,13 @@ const {
 } = require("../../models/Table");
 
 // @route   POST api/game
-// @desc    Create a new table if user hasn't already created / joined another table and persist to DB
+// @desc    Get game information that user is active on
 // @access  Private
 router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // callback function that returns error or table object
-    const returnTable = (errors, tableFromCaller = {}) => {
-      if (errors) {
-        // console.log("errors", errors);
-        res.status(400);
-        return res.json(errors);
-      }
-
-      // console.log("tableFromCaller", tableFromCaller);
-      return res.json(tableFromCaller);
-    };
-
-    // if table exists and user is not already on table then add user to table, else create a new table
-    joinTableIfItExists(returnTable, req.user.id);
+    getTable(req.user.id, returnResult(req, res));
   }
 );
 
@@ -44,7 +31,6 @@ router.post(
   "/create/:buyin",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    console.log("buyin", req.params.buyin);
     createNewTable(req.user.id, req.params.buyin, returnResult(req, res));
   }
 );

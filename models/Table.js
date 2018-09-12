@@ -124,10 +124,11 @@ const joinTable = async (tableID, userID, cb) => {
       await db.query("UPDATE tables SET status = 'started' where id = $1", [
         tableID
       ]);
-
-      table.players = await getPlayersAtTable(table.id, userID);
-      return cb(null, table);
+      // manual setting to avoid calling findtable again
+      table.status = "started";
     }
+    table.players = await getPlayersAtTable(tableID, userID);
+    return cb(null, table);
   } catch (e) {
     return cb(e, null);
   }
@@ -237,36 +238,19 @@ const isPlayerOnTable = async userID => {
   return false;
 };
 
-// @desc - join existing table
+// @desc - get table info that user is sitting on
 // @params - cb is a callback function that takes errors as it's first param, and table state as second. userID takes user id from requesting user
 // returns errors or table data
-const joinTableIfItExists = async (cb, userID) => {
-  let table;
+const getTable = async (userID, cb) => {
   try {
-    table = await findTable();
-    // create new table if none found
-    if (!table) {
-      table = await createNewTable(userID);
+    const alreadyAtTable = await isPlayerOnTable(userID);
 
-      table.players = await getPlayersAtTable(table.id, userID);
-
-      return cb(null, table);
+    if (!alreadyAtTable) {
+      throw "Not in an active game";
     }
 
-    // return table if player is already on table
-    if (await isPlayerOnTable(userID)) {
-      table.players = await getPlayersAtTable(table.id, userID);
-      return cb(null, table);
-    }
-
-    // set player object to requesting user's id if above are false
-    // add the user to the table
-    await joinTable(table.id, userID);
-    // instead of querying the db again, change the status here
-    table.status = "started";
-
-    table.players = await getPlayersAtTable(table.id, userID);
-
+    table = await findTable(alreadyAtTable);
+    table.players = await getPlayersAtTable(alreadyAtTable, userID);
     return cb(null, table);
   } catch (e) {
     return cb(e, null);
@@ -1201,7 +1185,7 @@ const checkTurn = async userID => {
 };
 
 module.exports = {
-  joinTableIfItExists,
+  getTable,
   createNewTable,
   joinTable,
   exitTable,
