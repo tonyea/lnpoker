@@ -10,7 +10,8 @@ const {
   bet,
   call,
   exitTable,
-  initNewRound
+  initNewRound,
+  all
 } = require("../../models/Table");
 
 // @route   POST api/game
@@ -23,6 +24,13 @@ router.post(
     getTable(req.user.id, returnResult(req, res));
   }
 );
+
+// @route   GET api/game/all
+// @desc    Get game information that user is active on
+// @access  Public
+router.get("/all", (req, res) => {
+  all(returnResult(req, res));
+});
 
 // @route   POST api/game/create/:buyin
 // @desc    Create a new table if user hasn't already created / joined another table and persist to DB

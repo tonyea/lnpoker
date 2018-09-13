@@ -55,6 +55,31 @@ const buyIn = async (userID, tableID) => {
   return buyIn;
 };
 
+const all = async cb => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT 
+      tables.id AS id,
+      minbuyin,
+      status,
+      maxplayers,
+      count(player_id) as numplayers
+      FROM tables
+      INNER JOIN user_table 
+    ON tables.id = user_table.table_id
+    GROUP BY tables.id, minbuyin, status, maxplayers
+    `
+    );
+    if (rows.length === 0) {
+      throw "No active games";
+    }
+    return cb(null, rows);
+  } catch (e) {
+    return cb(e, null);
+  }
+};
+
 // @params tableID, userID and cb
 // @return cb with table object or error
 // @desc add user's id to user_table and distribute his cards from deck
@@ -1187,6 +1212,7 @@ const checkTurn = async userID => {
 module.exports = {
   getTable,
   createNewTable,
+  all,
   joinTable,
   exitTable,
   check,

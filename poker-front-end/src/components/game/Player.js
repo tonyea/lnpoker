@@ -53,7 +53,6 @@ export default class Player extends PureComponent {
 
     const { disabledstate } = this.props;
 
-    // console.log("cards", props.myInfo);
     const renderCard = (cardInfo, cardKey) => {
       return <Card card={cardInfo} key={cardKey} />;
     };
