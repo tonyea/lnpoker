@@ -282,11 +282,71 @@ const getTable = async (userID, cb) => {
   }
 };
 
-// @desc - join existing table
+// @desc - exit table
 // @params - userID from request
-// returns errors or table data
-const exitTable = async userID => {
-  await db.query("DELETE FROM user_table WHERE player_id = $1", [userID]);
+// returns errors or success message
+const exitTable = async (userID, cb) => {
+  try {
+    // return chips to bank
+    await db.query(
+      "UPDATE users SET bank = bank + (SELECT chips + bet FROM user_table WHERE player_id = $1) WHERE id = $1",
+      [userID]
+    );
+
+    const dbres = await db.query(
+      "SELECT player_id FROM user_table WHERE table_id = ( SELECT table_id FROM user_table WHERE player_id = $1) AND player_id != $1",
+      [userID]
+    );
+
+    // remove user from DB
+    await db.query("DELETE FROM user_table WHERE player_id = $1", [userID]);
+
+    // if number of players remaining is 1 then kick him out and then send message to user that he has been kicked out
+    if (dbres.rows.length === 1) {
+      return cb(null, {
+        gameover: await kickLastPlayer(dbres.rows[0].player_id)
+      });
+    }
+
+    return cb(null, "Success");
+  } catch (e) {
+    return cb(e, null);
+  }
+};
+
+// @desc - remove last player from table and delete table
+// @params - playerID
+// returns success message
+const kickLastPlayer = async playerID => {
+  let tobank, tableID;
+  // get chips and bet that will be returned to bank
+  await db
+    .query(
+      "SELECT chips+bet as money, table_id FROM user_table WHERE player_id = $1",
+      [playerID]
+    )
+    .then(dbres => {
+      tobank = dbres.rows[0].money;
+      tableID = dbres.rows[0].table_id;
+    });
+
+  // add pot amount to bank
+  await db
+    .query("SELECT pot from tables WHERE id = $1", [tableID])
+    .then(dbres => {
+      tobank += dbres.rows[0].pot;
+    });
+
+  // returning money to bank
+  await db.query("UPDATE users SET bank=bank+$2 WHERE id=$1", [
+    playerID,
+    tobank
+  ]);
+
+  // delete last player and table since no players left
+  await db.query("DELETE FROM user_table WHERE player_id=$1", [playerID]);
+  await db.query("DELETE FROM tables WHERE id=$1", [tableID]);
+  return "Success";
 };
 
 // @desc - trigger this to start a new round

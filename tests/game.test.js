@@ -72,7 +72,7 @@ describe("Game Tests", () => {
 
   const getGame = async player => {
     return await request(app)
-      .post("/api/game")
+      .get("/api/game")
       .set("Authorization", player.token)
       .send();
   };
@@ -1152,7 +1152,7 @@ describe("Game Tests", () => {
 
     // verify that roundname is showdown
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", notCurrentPlayer.token)
       .send()
       .then(res => expect(res.body.roundname).toBe("Showdown"));
@@ -1165,7 +1165,7 @@ describe("Game Tests", () => {
     );
 
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", notCurrentPlayer.token)
       .send()
       .then(res => {
@@ -1213,7 +1213,7 @@ describe("Game Tests", () => {
       let notCurrentPlayerChips;
       let smallblind;
       await request(app)
-        .post("/api/game/")
+        .get("/api/game/")
         .set("Authorization", notCurrentPlayer.token)
         .send()
         .then(res => {
@@ -1247,7 +1247,7 @@ describe("Game Tests", () => {
       // unfolded player doesn't need to do an action - end of round
       // unfolded player checks his table and sees chips plus pot amount
       await request(app)
-        .post("/api/game/")
+        .get("/api/game/")
         .set("Authorization", notCurrentPlayer.token)
         .send()
         .then(res =>
@@ -1263,7 +1263,7 @@ describe("Game Tests", () => {
 
   // User joins a game mid round
   test("User joins a game mid round", async () => {
-    // expect.assertions(33);
+    expect.assertions(33);
     let tableID, buyin;
     buyin = 100000;
     // create a game with player 1
@@ -1285,7 +1285,7 @@ describe("Game Tests", () => {
 
     // expect 3 cards on board
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", players[1].token)
       .send()
       .then(res => {
@@ -1356,7 +1356,7 @@ describe("Game Tests", () => {
       .set("Authorization", players[0].token)
       .send();
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", players[0].token)
       .send()
       .then(res => {
@@ -1379,7 +1379,7 @@ describe("Game Tests", () => {
       .set("Authorization", players[0].token)
       .send();
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", players[1].token)
       .send()
       .then(res => {
@@ -1409,7 +1409,7 @@ describe("Game Tests", () => {
       }, 3500)
     );
     await request(app)
-      .post("/api/game/")
+      .get("/api/game/")
       .set("Authorization", players[2].token)
       .send()
       .then(res => {
@@ -1449,6 +1449,102 @@ describe("Game Tests", () => {
       expect(res.statusCode).toBe(400);
       expect(res.body).toContain("Maximum players alread seated.");
     });
+  });
+
+  // User exits a game
+  test("User exits a 2 player game", async () => {
+    // get p1 and p2 bank
+    let p1BankInitial, p2BankInitial;
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankInitial = res.rows[0].bank));
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankInitial = res.rows[0].bank));
+
+    let tableID, buyin, p1BankPost, p2BankPost;
+    buyin = 20000;
+    // create a game with player 1
+    await createGame(players[0], buyin).then(res => (tableID = res.body.id));
+
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankPost = parseInt(res.rows[0].bank)));
+
+    expect(p1BankInitial).toEqual(p1BankPost + buyin);
+
+    // join game as player 2
+    await joinGame(players[1], tableID);
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankPost = parseInt(res.rows[0].bank)));
+
+    expect(p2BankInitial).toEqual(p2BankPost + buyin);
+
+    // user exits before betting anything
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(200);
+        expect(res.body.gameover).toContain("Success");
+      });
+
+    // user bank should be as was before.
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankPost = res.rows[0].bank));
+    expect(p1BankInitial).toEqual(p1BankPost);
+
+    // opponent gets kicked when only one player left
+    // he banks his chips + pot amount
+    // opponent bank should be as was before because p1 hasn't played
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankPost = res.rows[0].bank));
+    expect(p2BankInitial).toEqual(p2BankPost);
+
+    // table gets deleted
+    await db.query("SELECT id FROM tables").then(res => {
+      expect(res.rows.length).toBe(0);
+    });
+
+    // user exits when he has bet 2000 in the pot, and round is past deal
+    // user bank should be -2000.
+    // opponent gets kicked out for there being only one player left.
+    // opponent bank should be +2000
+
+    // user exits after losing a round having lost 2000
+    // user bank should be -2000.
+    // opponent gets kicked out for there being only one player left.
+    // opponent bank should be +2000
+
+    // if theres 3 players -
+    // user exits before betting anything, he was big blind.
+    // user bank should be as was before.
+    // opponents can continue round as normal
+
+    // user exits when he has bet 2000 in the pot, and round is past deal
+    // user bank should be -2000.
+    // opponents can continue round as normal
+    // winner of round should get entire pot including 2000
+
+    // user exits after losing a round having lost 2000
+    // user bank should be -2000.
+    // opponents can continue round as normal
   });
 
   // test all in player against part in - same as above but player 2 has less than max bet

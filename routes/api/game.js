@@ -14,10 +14,10 @@ const {
   all
 } = require("../../models/Table");
 
-// @route   POST api/game
+// @route   GET api/game
 // @desc    Get game information that user is active on
 // @access  Private
-router.post(
+router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
@@ -130,19 +130,27 @@ const returnResult = (req, res) => {
         });
       }, 3000);
     }
+    // send message before kicking out last player
+    if (resultFromCaller.gameover) {
+      setTimeout(() => {
+        io.of("/game")
+          .in("testroom")
+          .emit("gameover");
+      }, 3000);
+    }
 
     return res.json(resultFromCaller);
   };
 };
 
-// @route   POST api/game
+// @route   POST api/game/exit
 // @desc    Exit table, persist to DB
 // @access  Private
 router.post(
-  "/leave",
+  "/exit",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    exitTable(req.user.id);
+    exitTable(req.user.id, returnResult(req, res));
     console.log("exited");
   }
 );
