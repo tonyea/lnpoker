@@ -89,6 +89,9 @@ router.post(
   }
 );
 
+// @route   POST api/game/call
+// @desc    User action call
+// @access  Private
 router.post(
   "/call",
   passport.authenticate("jwt", { session: false }),

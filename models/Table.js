@@ -287,25 +287,50 @@ const getTable = async (userID, cb) => {
 // returns errors or success message
 const exitTable = async (userID, cb) => {
   try {
+    // throw any bets in pot
+    await db.query(
+      "UPDATE tables SET pot = pot + (SELECT bet FROM user_table WHERE player_id = $1) WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1)",
+      [userID]
+    );
+
     // return chips to bank
     await db.query(
-      "UPDATE users SET bank = bank + (SELECT chips + bet FROM user_table WHERE player_id = $1) WHERE id = $1",
+      "UPDATE users SET bank = bank + (SELECT chips FROM user_table WHERE player_id = $1) WHERE id = $1",
       [userID]
     );
 
     const dbres = await db.query(
-      "SELECT player_id FROM user_table WHERE table_id = ( SELECT table_id FROM user_table WHERE player_id = $1) AND player_id != $1",
+      `
+      SELECT 
+      player_id, seated, username
+      FROM user_table
+      INNER JOIN users on users.id=user_table.player_id
+      WHERE table_id = ( SELECT table_id FROM user_table WHERE player_id = $1) AND player_id != $1`,
       [userID]
     );
+    const remainingPlayers = dbres.rows;
 
-    // remove user from DB
+    // remove user from table
     await db.query("DELETE FROM user_table WHERE player_id = $1", [userID]);
 
-    // if number of players remaining is 1 then kick him out and then send message to user that he has been kicked out
-    if (dbres.rows.length === 1) {
+    // if number of players remaining, seated or unseated, is 1 then kick him out and then send message to user that he has been kicked out
+    if (remainingPlayers.length === 1) {
       return cb(null, {
         gameover: await kickLastPlayer(dbres.rows[0].player_id)
       });
+    }
+    // if only one player left seated, then return winner info
+    const remainingSeatedPlayers = remainingPlayers.filter(
+      player => player.seated
+    );
+    if (remainingSeatedPlayers.length === 1) {
+      // give pot plus own bets to winner
+      await db.query(
+        "UPDATE user_table SET chips = chips + bet + (SELECT pot FROM tables WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1)) WHERE player_id = $1",
+        [remainingSeatedPlayers[0].player_id]
+      );
+      // init new round
+      await initNewRound(remainingSeatedPlayers[0].player_id);
     }
 
     return cb(null, "Success");
@@ -318,24 +343,27 @@ const exitTable = async (userID, cb) => {
 // @params - playerID
 // returns success message
 const kickLastPlayer = async playerID => {
-  let tobank, tableID;
+  let tobank, tableID, seated;
   // get chips and bet that will be returned to bank
   await db
     .query(
-      "SELECT chips+bet as money, table_id FROM user_table WHERE player_id = $1",
+      "SELECT chips+bet as money, table_id, seated FROM user_table WHERE player_id = $1",
       [playerID]
     )
     .then(dbres => {
       tobank = dbres.rows[0].money;
       tableID = dbres.rows[0].table_id;
+      seated = dbres.rows[0].seated;
     });
 
-  // add pot amount to bank
-  await db
-    .query("SELECT pot from tables WHERE id = $1", [tableID])
-    .then(dbres => {
-      tobank += dbres.rows[0].pot;
-    });
+  // add pot amount to bank if last player is seated
+  if (seated) {
+    await db
+      .query("SELECT pot from tables WHERE id = $1", [tableID])
+      .then(dbres => {
+        tobank += dbres.rows[0].pot;
+      });
+  }
 
   // returning money to bank
   await db.query("UPDATE users SET bank=bank+$2 WHERE id=$1", [
@@ -880,6 +908,7 @@ const progress = async userID => {
       //Move all bets to the pot
       await moveAllBetsToPot(userID);
 
+      // if only one player left unfolded, then he should win the pot
       if (notFolded.length === 1) {
         await setRoundName("Showdown", userID);
 

@@ -1499,53 +1499,215 @@ describe("Game Tests", () => {
         expect(res.body.gameover).toContain("Success");
       });
 
-    // user bank should be as was before.
+    // p1 bank should be less his blind. - in 2p game, p1 is BB
     await db
       .query("SELECT bank FROM users WHERE username = $1", [
         players[0].playerName
       ])
       .then(res => (p1BankPost = res.rows[0].bank));
-    expect(p1BankInitial).toEqual(p1BankPost);
+    expect(p1BankPost).toEqual(p1BankInitial - 2000);
 
     // opponent gets kicked when only one player left
     // he banks his chips + pot amount
-    // opponent bank should be as was before because p1 hasn't played
+    // opponent bank should be as was before + BB
     await db
       .query("SELECT bank FROM users WHERE username = $1", [
         players[1].playerName
       ])
       .then(res => (p2BankPost = res.rows[0].bank));
-    expect(p2BankInitial).toEqual(p2BankPost);
+    expect(p2BankPost).toEqual(p2BankInitial + 2000);
 
     // table gets deleted
     await db.query("SELECT id FROM tables").then(res => {
       expect(res.rows.length).toBe(0);
     });
 
-    // user exits when he has bet 2000 in the pot, and round is past deal
-    // user bank should be -2000.
-    // opponent gets kicked out for there being only one player left.
-    // opponent bank should be +2000
+    // -------------------------------------- Exit after Deal -------------- //
+    // resetting variables for p1 and p2 bank
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankInitial = res.rows[0].bank));
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankInitial = res.rows[0].bank));
+    // create a game with player 1
+    await createGame(players[0], buyin).then(res => (tableID = res.body.id));
+    // join game as player 2
+    await joinGame(players[1], tableID);
+    // call and check so round changes to Turn
+    await request(app)
+      .post("/api/game/call")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/check")
+      .set("Authorization", players[0].token)
+      .send();
 
-    // user exits after losing a round having lost 2000
-    // user bank should be -2000.
-    // opponent gets kicked out for there being only one player left.
-    // opponent bank should be +2000
+    // p1 exits when he has bet 2000 in the pot, and round is past deal
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[0].token)
+      .send();
+    // p1 bank should be -2000.
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankPost = res.rows[0].bank));
+    expect(p1BankInitial).toEqual(p1BankPost + 2000);
 
-    // if theres 3 players -
-    // user exits before betting anything, he was big blind.
-    // user bank should be as was before.
-    // opponents can continue round as normal
+    // p2 gets kicked out for there being only one player left.
+    // p2 bank should be +2000
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankPost = res.rows[0].bank));
+    expect(p2BankInitial).toEqual(p2BankPost - 2000);
 
-    // user exits when he has bet 2000 in the pot, and round is past deal
-    // user bank should be -2000.
-    // opponents can continue round as normal
-    // winner of round should get entire pot including 2000
-
-    // user exits after losing a round having lost 2000
-    // user bank should be -2000.
-    // opponents can continue round as normal
+    // no users or table left
+    await db
+      .query("SELECT id FROM user_table")
+      .then(res => expect(res.rows.length).toBe(0));
+    await db
+      .query("SELECT id FROM tables")
+      .then(res => expect(res.rows.length).toBe(0));
   });
+
+  // User exits a game
+  test("User exits a 3 player game", async () => {
+    // get p1, p2 and p3 bank
+    let p1BankInitial, p2BankInitial, p3BankInitial;
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankInitial = res.rows[0].bank));
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankInitial = res.rows[0].bank));
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[2].playerName
+      ])
+      .then(res => (p3BankInitial = res.rows[0].bank));
+
+    let tableID, buyin, p1BankPost, p2BankPost, p3BankPost;
+    buyin = 30000;
+
+    // create a game with player 1
+    await createGame(players[0], buyin).then(res => (tableID = res.body.id));
+
+    // join game as player 2 and 3
+    await joinGame(players[1], tableID);
+    await joinGame(players[2], tableID).then(res => {
+      // p3 should be unseated, p1 and p2 should be seated
+      expect(
+        res.body.players.find(player => player.seated === false).username
+      ).toBe(players[2].playerName);
+
+      expect(
+        res.body.players.find(player => player.seated === true).username
+      ).toBe(players[0].playerName);
+    });
+
+    // p1 exits before betting anything
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(200);
+      });
+
+    // p2 wins the round (wins the big blind amount) and next round has p2 and p3
+    await request(app)
+      .get("/api/game/")
+      .set("Authorization", players[1].token)
+      .send()
+      .then(res => {
+        const mychips = res.body.players.find(
+          player => player.username === players[1].playerName
+        ).chips;
+
+        // 30000 - SB 1000 + SB 1000 + BB 2000 - BB 2000 because next round he is BB
+        expect(mychips).toBe(30000);
+      });
+
+    // p1 bank should be as was before less BB.
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankPost = res.rows[0].bank));
+    expect(p1BankPost).toEqual(p1BankInitial - 2000);
+
+    // p2 and p3 play continue to Deal
+    await request(app)
+      .get("/api/game/call")
+      .set("Authorization", players[2].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+
+    // p1 rejoins and is unseated
+    await joinGame(players[0], tableID);
+
+    // p2 and p3 play till turn
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[2].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+
+    // p2 and p3 leave
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[2].token)
+      .send();
+
+    // p1 bank should be 98000 + 2000 because a new round is started before p3 leaves. Therefore, p1 wins the pot
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankPost = res.rows[0].bank));
+    expect(p1BankPost).toEqual(p1BankInitial);
+
+    // p3 will get the pot but since he left after another round is started, he loses BB. +2000 -2000
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[2].playerName
+      ])
+      .then(res => (p3BankPost = res.rows[0].bank));
+    expect(p3BankPost).toEqual(p3BankInitial);
+
+    // no users or table left
+    await db
+      .query("SELECT id FROM user_table")
+      .then(res => expect(res.rows.length).toBe(0));
+    await db
+      .query("SELECT id FROM tables")
+      .then(res => expect(res.rows.length).toBe(0));
+  });
+
+  // test player exit from 4 player game
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
