@@ -37,7 +37,7 @@ const init = app => {
       console.log("a user joined room", activePlayers);
     });
 
-    client.on("disconnect", () => {
+    client.on("disconnect", tableid => {
       userNum--;
       console.log("Got disconnected!", userNum);
 
@@ -45,7 +45,8 @@ const init = app => {
       let i = activePlayers.findIndex(player => player.socketid === client.id);
 
       // if found, trigger exit table and leave room
-      if (i >= 0) {
+      // validate that the table is the same for that socketid
+      if (i >= 0 && activePlayers[i].tableid === tableid && tableid !== null) {
         exitTable(activePlayers[i].userid, returnEmit);
         // remove that element after triggering exit table
         activePlayers.splice(i, 1);

@@ -21,14 +21,15 @@ class Table extends Component {
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // Set state of game when table is mounted
     console.log("mounted");
-    this.props.fetchGameData();
+    await this.props.fetchGameData();
 
     this.state.socket.on("connect", () => {
       this.state.socket.emit("room", this.props.game.id, this.props.user.id);
       console.log("emitted room info", this.props.game.id, this.props.user.id);
+      console.log("client socket id on connect", this.state.socket.id);
     });
 
     this.state.socket.on("round message", msg =>
@@ -40,17 +41,13 @@ class Table extends Component {
       this.props.fetchGameData();
       this.setState({ roundmessage: {} });
     });
-
-    // window.onbeforeunload = confirmExit;
-    // function confirmExit() {
-    //   return "You have attempted to leave this page. Are you sure?";
-    // }
   }
 
   componentWillUnmount() {
     // remove player from state when leaving table
     // this.props.exitGame();
-    this.state.socket.disconnect();
+    console.log("client socket id on disconnect", this.state.socket.id);
+    this.state.socket.disconnect(this.props.game.id);
   }
   render() {
     console.log("rendered");
