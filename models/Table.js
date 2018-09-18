@@ -325,6 +325,9 @@ const exitTable = async (userID, cb) => {
         },
         tableID
       );
+    } else if (remainingPlayers.length === 0) {
+      // deleting table if player 1 joins and leaves without getting other players
+      await db.query("DELETE FROM tables WHERE id = $1", [tableID]);
     }
     // if only one player left seated, then return winner info
     const remainingSeatedPlayers = remainingPlayers.filter(

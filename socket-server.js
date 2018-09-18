@@ -37,19 +37,21 @@ const init = app => {
       console.log("a user joined room", activePlayers);
     });
 
-    client.on("disconnect", async () => {
+    client.on("disconnect", () => {
       userNum--;
       console.log("Got disconnected!", userNum);
 
       // find player's socket id that matches the disconnected socket id
-      let i = activePlayers.findIndex(player => player.socketID === client.id);
+      let i = activePlayers.findIndex(player => player.socketid === client.id);
 
-      // if found, trigger exit table
-      await exitTable(activePlayers[i].userid, returnEmit);
-      // remove that element after triggering exit table
-      activePlayers.splice(i, 1);
+      // if found, trigger exit table and leave room
+      if (i >= 0) {
+        exitTable(activePlayers[i].userid, returnEmit);
+        // remove that element after triggering exit table
+        activePlayers.splice(i, 1);
 
-      console.log("activePlayers when a user disconnects", activePlayers);
+        console.log("activePlayers when a user disconnects", activePlayers);
+      }
     });
 
     // client.on("message", handleMessage);

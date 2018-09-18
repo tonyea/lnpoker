@@ -44,6 +44,7 @@ class Table extends Component {
   componentWillUnmount() {
     // remove player from state when leaving table
     // this.props.exitGame();
+    this.state.socket.disconnect();
   }
   render() {
     console.log("rendered");
