@@ -72,7 +72,7 @@ const all = async cb => {
     `
     );
     if (rows.length === 0) {
-      throw "No active games";
+      return cb(null, []);
     }
     return cb(null, rows);
   } catch (e) {

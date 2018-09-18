@@ -1,4 +1,4 @@
-import React, { PureComponent } from "react";
+import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
@@ -10,7 +10,7 @@ import PropTypes from "prop-types";
 // socket
 import io from "socket.io-client";
 
-class Table extends PureComponent {
+class Table extends Component {
   constructor(props) {
     super(props);
 

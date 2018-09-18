@@ -28,12 +28,13 @@ class ActiveGames extends Component {
     if (!this.props.auth.isAuthenticated) {
       // redirect to login
       return this.props.history.push("/login");
+    } else {
+      await axios.post("/api/game/join/" + this.gameID).then(res => {
+        if (res.status === 200) {
+          return this.props.history.push("/play");
+        }
+      });
     }
-    await axios.post("/api/game/join/" + this.gameID).then(res => {
-      if (res.status === 200) {
-        return this.props.history.push("/play");
-      }
-    });
   };
 
   render() {
@@ -41,7 +42,7 @@ class ActiveGames extends Component {
       // return <Card card={gameInfo} key={gameKey} />;
       return (
         <tr key={gameKey}>
-          <th scope="row">{parseInt(gameKey) + 1}</th>
+          <th scope="row">{parseInt(gameKey, 10) + 1}</th>
           <td>{gameInfo.numplayers + "/" + gameInfo.maxplayers}</td>
           <td>{gameInfo.status}</td>
           <td>{gameInfo.minbuyin} Sats</td>
