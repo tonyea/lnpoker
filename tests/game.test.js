@@ -1708,6 +1708,123 @@ describe("Game Tests", () => {
   });
 
   // test player exit from 4 player game
+  test("User exits a 4 player game", async () => {
+    // get p1, p2, p3, p4 bank
+    let sumBankBeforeGame, sumBankAfterGame;
+    await db
+      .query(
+        "SELECT sum(bank) as sumbank FROM users WHERE username=$1 OR username=$2 OR username=$3 OR username=$4 ",
+        [
+          players[0].playerName,
+          players[1].playerName,
+          players[2].playerName,
+          players[3].playerName
+        ]
+      )
+      .then(res => (sumBankBeforeGame = res.rows[0].sumbank));
+
+    let tableID, buyin;
+    buyin = 40000;
+
+    // create a game with player 1
+    await createGame(players[0], buyin).then(res => (tableID = res.body.id));
+
+    // join game as player 2, 3 and 4. 3 and 4 will be unseated
+    await joinGame(players[1], tableID);
+    await joinGame(players[2], tableID);
+    await joinGame(players[3], tableID);
+
+    // p1 exits before betting anything
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(200);
+      });
+
+    // p2 wins the round (wins the big blind amount) and next round has p2, p3 and p4
+    await request(app)
+      .get("/api/game/")
+      .set("Authorization", players[1].token)
+      .send()
+      .then(res => {
+        const mychips = res.body.players.find(
+          player => player.username === players[1].playerName
+        ).chips;
+
+        // 40000 - SB 1000 + SB 1000 + BB 2000
+        expect(mychips).toBe(42000);
+      });
+
+    // p2, p3 and p4 play continue to Deal
+    await request(app)
+      .get("/api/game/call")
+      .set("Authorization", players[2].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[2].token)
+      .send();
+
+    // p1 rejoins and is unseated
+    await joinGame(players[0], tableID);
+
+    // p2, p3, p4 play till turn
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[2].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .get("/api/game/check")
+      .set("Authorization", players[2].token)
+      .send();
+
+    // p2, p3 and p4 leave
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[1].token)
+      .send();
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[2].token)
+      .send();
+    await request(app)
+      .post("/api/game/exit")
+      .set("Authorization", players[3].token)
+      .send();
+
+    // final sum of bank balances should be same as before
+    await db
+      .query(
+        "SELECT sum(bank) as sumbank FROM users WHERE username=$1 OR username=$2 OR username=$3 OR username=$4 ",
+        [
+          players[0].playerName,
+          players[1].playerName,
+          players[2].playerName,
+          players[3].playerName
+        ]
+      )
+      .then(res => (sumBankAfterGame = res.rows[0].sumbank));
+
+    expect(sumBankBeforeGame).toEqual(sumBankAfterGame);
+
+    // no users or table left
+    await db
+      .query("SELECT id FROM user_table")
+      .then(res => expect(res.rows.length).toBe(0));
+    await db
+      .query("SELECT id FROM tables")
+      .then(res => expect(res.rows.length).toBe(0));
+  });
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
