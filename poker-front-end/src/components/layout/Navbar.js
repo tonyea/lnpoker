@@ -8,7 +8,13 @@ import numFormat from "../../utils/numFormatter";
 class Navbar extends Component {
   onLogoutClick(e) {
     e.preventDefault();
-    this.props.logoutUser();
+    if (window.confirm("Are you sure you want to logout?")) {
+      // Save it!
+      this.props.logoutUser();
+    } else {
+      // Do nothing!
+      return;
+    }
   }
 
   render() {

@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import * as actions from "../../actions/gameActions";
 import { getIsFetching } from "../../reducers";
 import PropTypes from "prop-types";
+import { Prompt } from "react-router-dom";
 
 // socket
 import io from "socket.io-client";
@@ -39,6 +40,11 @@ class Table extends Component {
       this.props.fetchGameData();
       this.setState({ roundmessage: {} });
     });
+
+    // window.onbeforeunload = confirmExit;
+    // function confirmExit() {
+    //   return "You have attempted to leave this page. Are you sure?";
+    // }
   }
 
   componentWillUnmount() {
@@ -70,6 +76,11 @@ class Table extends Component {
 
     return (
       <div className="container table-container">
+        <Prompt
+          message={location =>
+            `Leaving a game might lead to loss of blinds and bets placed. Are you sure?`
+          }
+        />
         <Opponents opponents={opponents} disabledstate={disabledstate} />
 
         <Board {...rest} roundMessage={this.state.roundmessage} />
