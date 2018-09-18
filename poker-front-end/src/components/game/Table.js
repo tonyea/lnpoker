@@ -26,8 +26,8 @@ class Table extends Component {
     this.props.fetchGameData();
 
     this.state.socket.on("connect", () => {
-      this.state.socket.emit("room", "testroom");
-      console.log("emitted room info");
+      this.state.socket.emit("room", this.props.game.id, this.props.user.id);
+      console.log("emitted room info", this.props.game.id, this.props.user.id);
     });
 
     this.state.socket.on("round message", msg =>

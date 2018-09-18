@@ -12,7 +12,7 @@ export const fetchGameData = () => async dispatch => {
   dispatch(requestGameData());
 
   try {
-    const res = await axios.post("/api/game");
+    const res = await axios.get("/api/game");
     dispatch(receiveGameData(res.data));
   } catch (error) {
     dispatch({

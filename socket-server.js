@@ -1,4 +1,4 @@
-const poker = require("./lib/node-poker");
+const exitTable = require("./models/Table").exitTable;
 
 /**
  * Initialize Socket.io
@@ -12,83 +12,95 @@ const init = app => {
   app.set("socketio", io);
 
   let userNum = 0;
-  // let activePlayers = [];
+  let activePlayers = [];
   io.of("/game").on("connection", client => {
-    client.on("room", room => {
-      client.join(room);
-    });
-
     userNum++;
     console.log("a user connected", userNum);
-    // console.log("activePlayers when a user connects 3", activePlayers);
+    console.log("users and rooms", activePlayers);
 
-    // client.on("new player", (playerID, playerName) => {
-    //   // if user is in array of active players then update his socket id
-    //   const playerIndex = activePlayers.findIndex(
-    //     activePlayer => activePlayer.playerID === playerID
-    //   );
-    //   // console.log(playerIndex);
-    //   if (playerIndex !== -1) {
-    //     activePlayers[playerIndex].socketID = client.id;
-    //     console.log("activePlayers when a user connects 1", activePlayers);
+    client.on("room", (tableid, userid) => {
+      // if user is already in array of active players then update his socket id
+      const playerIndex = activePlayers.findIndex(
+        activePlayer => activePlayer.userid === userid
+      );
+      if (playerIndex !== -1) {
+        activePlayers[playerIndex].socketid = client.id;
+        console.log("player already connected", activePlayers[playerIndex]);
+        return;
+      }
+      // else if user is not in array of active players then add him
+      else if (playerIndex === -1) {
+        activePlayers.push({ userid, tableid, socketid: client.id });
+      }
+      // have client join the room with his tableID
+      client.join(tableid);
+      console.log("a user joined room", activePlayers);
+    });
 
-    //     console.log("player already connected", activePlayers[playerIndex]);
-    //     return;
-    //   }
-    //   // else if user is not in array of active players then add him
-    //   else if (playerIndex === -1) {
-    //     activePlayers.push({ socketID: client.id, playerID, playerName });
-    //   }
-
-    //   console.log("activePlayers when a user connects 2", activePlayers);
-    //   // console.log("new player connected", activePlayers);
-    // });
-
-    client.on("message", handleMessage);
-
-    client.on("disconnect", () => {
+    client.on("disconnect", async () => {
       userNum--;
       console.log("Got disconnected!", userNum);
-      // // find player's socket id that matches the disconnected socket id
-      // let i = activePlayers.findIndex(player => player.socketID === client.id);
-      // // if found, remove that element
-      // activePlayers.splice(i, 1);
-      // console.log("activePlayers when a user disconnects", activePlayers);
+
+      // find player's socket id that matches the disconnected socket id
+      let i = activePlayers.findIndex(player => player.socketID === client.id);
+
+      // if found, trigger exit table
+      await exitTable(activePlayers[i].userid, returnEmit);
+      // remove that element after triggering exit table
+      activePlayers.splice(i, 1);
+
+      console.log("activePlayers when a user disconnects", activePlayers);
     });
+
+    // client.on("message", handleMessage);
   });
 
-  let msgs = [];
-  const handleMessage = msg => {
-    // console.log("message: " + msg);
-    // add message to back end state
-    msgs = [...msgs, msg];
-    // emit all messages to chat subscribers
-    io.emit("chat message", msgs);
+  const returnEmit = (errors, resultFromCaller = {}, tableID = null) => {
+    if (errors) {
+      return;
+    }
+    // emit a status update to all players at the table that the table has changed. it will also return the response as is
+    if (resultFromCaller === "Success") {
+      io.of("/game")
+        .in(tableID)
+        .emit("table updated");
+    }
+    // if round message received emit to table
+    if (resultFromCaller.winner || resultFromCaller.bankrupt) {
+      io.of("/game")
+        .in(tableID)
+        .emit("round message", resultFromCaller);
+    }
+    // trigger init new round if winner
+    if (resultFromCaller.winner) {
+      console.log(resultFromCaller.winner);
+      setTimeout(() => {
+        initNewRound(req.user.id).then(res => {
+          io.of("/game")
+            .in(tableID)
+            .emit("table updated");
+        });
+      }, 3000);
+    }
+    // send message before kicking out last player
+    if (resultFromCaller.gameover) {
+      setTimeout(() => {
+        io.of("/game")
+          .in(tableID)
+          .emit("gameover");
+      }, 3000);
+    }
   };
 
-  // const handleNewPlayer = (id, name) => {
-  //   // if user is not in array of active players then add him
-  //   const foundPlayer = activePlayers.find(
-  //     activePlayer => activePlayer.id === id
-  //   );
-  //   if (foundPlayer !== undefined) {
-  //     return console.log("player already connected", foundPlayer);
-  //   }
-  //   activePlayers.push({ id, name });
-  //   console.log("new player connected", activePlayers);
+  // let msgs = [];
+  // const handleMessage = msg => {
+  //   // console.log("message: " + msg);
+  //   // add message to back end state
+  //   msgs = [...msgs, msg];
+  //   // emit all messages to chat subscribers
+  //   io.emit("chat message", msgs);
   // };
 
-  // const handleDisconnect = id => {
-  //   // find index of user that disconnected, remove from array and remove from DB user_table
-  //   activePlayers.findIndex(index => {
-  //     if (activePlayers[index].id === id) {
-  //       activePlayers.splice(index, 1);
-  //     }
-  //   });
-  //   console.log("user disconnected", activePlayers);
-  //   userNum--;
-  //   console.log("user disconnected", userNum);
-  // };
   return http;
 };
 

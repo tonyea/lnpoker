@@ -7,7 +7,6 @@ const Board = props => {
   };
 
   const { id, smallblind, bigblind, pot, board, roundMessage } = props;
-  console.log(board);
   const cardRows = [];
   for (const key in board) {
     const element = board[key];

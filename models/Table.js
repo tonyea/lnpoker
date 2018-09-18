@@ -91,7 +91,7 @@ const joinTable = async (tableID, userID, cb) => {
       // we're using alreadyAtTable (tableid) because it might be different from the one the user is trying to join. i.e. If the user tries to join a second table, he is returned to his first
       table = await findTable(alreadyAtTable);
       table.players = await getPlayersAtTable(alreadyAtTable, userID);
-      return cb(null, table);
+      return cb(null, table, tableID);
     }
     // if max users are already seated then throw error
     let minplayers, maxplayers, numplayers;
@@ -126,7 +126,7 @@ const joinTable = async (tableID, userID, cb) => {
     // check if we have minimum number of players
     if (numplayers < minplayers) {
       table.players = await getPlayersAtTable(table.id, userID);
-      return cb(null, table);
+      return cb(null, table, tableID);
     }
 
     // start new round if status is 'waiting'
@@ -153,7 +153,7 @@ const joinTable = async (tableID, userID, cb) => {
       table.status = "started";
     }
     table.players = await getPlayersAtTable(tableID, userID);
-    return cb(null, table);
+    return cb(null, table, tableID);
   } catch (e) {
     return cb(e, null);
   }
@@ -276,7 +276,7 @@ const getTable = async (userID, cb) => {
 
     table = await findTable(alreadyAtTable);
     table.players = await getPlayersAtTable(alreadyAtTable, userID);
-    return cb(null, table);
+    return cb(null, table, table.id);
   } catch (e) {
     return cb(e, null);
   }
@@ -288,10 +288,13 @@ const getTable = async (userID, cb) => {
 const exitTable = async (userID, cb) => {
   try {
     // throw any bets in pot
-    await db.query(
-      "UPDATE tables SET pot = pot + (SELECT bet FROM user_table WHERE player_id = $1) WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1)",
-      [userID]
-    );
+    let tableID;
+    await db
+      .query(
+        "UPDATE tables SET pot = pot + (SELECT bet FROM user_table WHERE player_id = $1) WHERE id = (SELECT table_id FROM user_table WHERE player_id = $1) returning id",
+        [userID]
+      )
+      .then(res => (tableID = res.rows[0].id));
 
     // return chips to bank
     await db.query(
@@ -315,9 +318,13 @@ const exitTable = async (userID, cb) => {
 
     // if number of players remaining, seated or unseated, is 1 then kick him out and then send message to user that he has been kicked out
     if (remainingPlayers.length === 1) {
-      return cb(null, {
-        gameover: await kickLastPlayer(dbres.rows[0].player_id)
-      });
+      return cb(
+        null,
+        {
+          gameover: await kickLastPlayer(dbres.rows[0].player_id)
+        },
+        tableID
+      );
     }
     // if only one player left seated, then return winner info
     const remainingSeatedPlayers = remainingPlayers.filter(
@@ -333,7 +340,7 @@ const exitTable = async (userID, cb) => {
       await initNewRound(remainingSeatedPlayers[0].player_id);
     }
 
-    return cb(null, "Success");
+    return cb(null, "Success", tableID);
   } catch (e) {
     return cb(e, null);
   }
@@ -628,7 +635,7 @@ const check = async (userID, cb) => {
     );
     if (res.rows.length > 0) {
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID));
+      return cb(null, await progress(userID), res.rows[0].table_id);
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -679,7 +686,7 @@ const fold = async (userID, cb) => {
     );
     if (res.rows.length > 0) {
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID));
+      return cb(null, await progress(userID), res.rows[0].table_id);
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -731,13 +738,16 @@ const bet = async (userID, betAmount, cb) => {
     }
 
     // add chips to my bet, remove from chips, set talked = true
-    await db.query(
-      "UPDATE user_table SET talked=true, lastaction='bet', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
-      [userID, betAmount]
-    );
+    let tableID;
+    await db
+      .query(
+        "UPDATE user_table SET talked=true, lastaction='bet', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+        [userID, betAmount]
+      )
+      .then(res => (tableID = res.rows[0].table_id));
 
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID));
+    return cb(null, await progress(userID), tableID);
   } catch (e) {
     return cb(e, null);
   }
@@ -781,14 +791,17 @@ const allin = async (userID, cb) => {
     }
 
     // add chips to my bet, remove from chips, set talked = true
-    await db.query(
-      "UPDATE user_table SET talked=true, lastaction='all in', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
-      [userID, totalChips]
-    );
+    let tableID;
+    await db
+      .query(
+        "UPDATE user_table SET talked=true, lastaction='all in', bet= bet + $2, chips=chips-$2 WHERE player_id = $1 returning * ",
+        [userID, totalChips]
+      )
+      .then(res => (tableID = res.rows[0].table_id));
 
     //Attempt to progress the game
     await progress(userID);
-    return cb(null, "All In");
+    return cb(null, "All In", tableID);
   } catch (e) {
     return cb(e, null);
   }
@@ -845,13 +858,16 @@ const call = async (userID, cb) => {
 
     // Match the highest bet
     // add chips to my bet, remove from chips, set talked = true
-    await db.query(
-      "UPDATE user_table SET talked=true, lastaction='call', chips=chips-$2+bet, bet= $2 WHERE player_id = $1 returning * ",
-      [userID, maxBet]
-    );
+    let tableID;
+    await db
+      .query(
+        "UPDATE user_table SET talked=true, lastaction='call', chips=chips-$2+bet, bet= $2 WHERE player_id = $1 returning * ",
+        [userID, maxBet]
+      )
+      .then(res => (tableID = res.rows[0].table_id));
 
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID));
+    return cb(null, await progress(userID), tableID);
     //Attemp to progress the game
   } catch (e) {
     // errors.notallowed = "Bet not allowed, replay please";
