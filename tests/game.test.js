@@ -241,7 +241,8 @@ describe("Game Tests", () => {
         currentplayer: false,
         lastaction: null,
         seated: true,
-        utid: expect.any(Number)
+        utid: expect.any(Number),
+        action_timestamp: null
       });
     });
   });

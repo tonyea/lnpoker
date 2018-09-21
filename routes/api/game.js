@@ -105,6 +105,7 @@ router.post(
 const returnResult = (req, res) => {
   return (errors, resultFromCaller = {}, tableID = null) => {
     const io = req.app.get("socketio");
+    const ee = req.app.get("eventemitter");
     if (errors) {
       // console.log("errors", errors);
       res.status(400);
@@ -141,7 +142,16 @@ const returnResult = (req, res) => {
           .emit("gameover");
       }, 3000);
     }
+    // // emit an event (node events) to the socket which can store currentplayer user id and his timestamp
+    // if (resultFromCaller.status === "started" && resultFromCaller.players) {
+    //   const currentPlayer = resultFromCaller.players.find(
+    //     player => player.currentplayer
+    //   );
 
+    //   if (currentPlayer && currentPlayer.action_timestamp !== null) {
+    //     ee.emitCurrentPlayer(tableID, currentPlayer.action_timestamp);
+    //   }
+    // }
     return res.json(resultFromCaller);
   };
 };

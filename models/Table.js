@@ -193,12 +193,12 @@ const getPlayersAtTable = async (tableID, userID) => {
 
   const players = await db.query(
     `
-    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, seated, (CASE WHEN ($3 IS TRUE) THEN cards ELSE null END) as cards
+    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, action_timestamp, seated, (CASE WHEN ($3 IS TRUE) THEN cards ELSE null END) as cards
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id!=$2
     union
-    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, seated, cards 
+    SELECT username, user_table.id as utid, dealer, chips, talked, lastaction, bet, currentplayer, action_timestamp, seated, cards 
     FROM users 
     INNER join user_table on users.id = user_table.player_id
     WHERE user_table.table_id=$1 and player_id=$2
@@ -346,6 +346,34 @@ const exitTable = async (userID, cb) => {
     return cb(null, "Success", tableID);
   } catch (e) {
     return cb(e, null);
+  }
+};
+
+// @desc - check if currentplayer has exceeded timeout and force his exit
+// @params - tableID
+// returns errors or success message
+const forceCurrentPlayerExit = async (tableID, cb) => {
+  console.log("forced exit table, ", tableID);
+  let playerdeadline;
+  // set timer to 30 secs
+  let timer = 30000;
+  let currentplayerID;
+  await db
+    .query(
+      "SELECT action_timestamp, player_id FROM user_table WHERE table_id =$1 and currentplayer=true",
+      [tableID]
+    )
+    .then(dbres => {
+      currentplayerID = dbres.rows[0].player_id;
+      playerdeadline =
+        new Date(dbres.rows[0].action_timestamp).getTime() + timer;
+    });
+
+  if (playerdeadline <= Date.now()) {
+    console.log("player needs to exit");
+    await exitTable(currentplayerID, cb);
+  } else {
+    console.log("player is still playing, this shouldn't have been called");
   }
 };
 
@@ -1323,6 +1351,7 @@ module.exports = {
   all,
   joinTable,
   exitTable,
+  forceCurrentPlayerExit,
   check,
   fold,
   bet,

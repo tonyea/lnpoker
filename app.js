@@ -18,6 +18,7 @@ if (process.env.NODE_ENV !== "test") {
     console.log(`Socket listening on port ${sock_port}!`)
   );
 }
+
 // Body parser middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
