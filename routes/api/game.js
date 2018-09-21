@@ -107,9 +107,13 @@ const returnResult = (req, res) => {
     const io = req.app.get("socketio");
     const ee = req.app.get("eventemitter");
     if (errors) {
-      // console.log("errors", errors);
-      res.status(400);
-      return res.json(errors);
+      // if error is "timedout" then force currentplayer exit, else return error as is
+      if (errors.timedout) {
+        return exitTable(req.user.id, returnResult(req, res));
+      } else {
+        res.status(400);
+        return res.json(errors);
+      }
     }
     // emit a status update to all players at the table that the table has changed. it will also return the response as is
     if (resultFromCaller === "Success") {

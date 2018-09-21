@@ -173,15 +173,59 @@ const checkShowdown = async userID => {
   return isShowdown;
 };
 
-// @desc - check if user is seated at table
+// @desc - check if user is allowed to make action
 // @params - userID
 // returns bool
-const checkIfNotSeated = async userID => {
-  let isSeated = await db
-    .query("SELECT seated FROM user_table WHERE player_id = $1", [userID])
-    .then(res => res.rows[0].seated);
+const checkIfUserAllowed = async userID => {
+  const errors = {};
+  // no moves allowed at showdown
+  let isShowdown, timestamp, timeout, isNotSeated, isNotCurrentPlayer;
+  await db
+    .query(
+      "SELECT roundname, timeout FROM tables where id = (SELECT table_id from user_table WHERE player_id = $1)",
+      [userID]
+    )
+    .then(res => {
+      isShowdown = res.rows[0].roundname === "Showdown";
+      timeout = res.rows[0].timeout;
+    });
 
-  return !isSeated;
+  if (isShowdown) {
+    errors.notallowed = "No moves allowed after showdown";
+    throw errors;
+  }
+
+  // check if user is seated at table
+  await db
+    .query(
+      "SELECT seated, action_timestamp, currentplayer FROM user_table WHERE player_id = $1",
+      [userID]
+    )
+    .then(res => {
+      isNotSeated = !res.rows[0].seated;
+      timestamp = res.rows[0].action_timestamp;
+      isNotCurrentPlayer = !res.rows[0].currentplayer;
+    });
+
+  if (isNotSeated) {
+    errors.notallowed = "Not yet seated";
+    throw errors;
+  }
+
+  // check if it is user's Turn
+  if (isNotCurrentPlayer) {
+    errors.notallowed = "Wrong user has made a move";
+    throw errors;
+  }
+
+  // check if user is timed out and force current player exit if true
+  const isTimedOut = new Date(timestamp).getTime() + timeout <= Date.now();
+  if (isTimedOut) {
+    errors.timedout = "User has timed out";
+    throw errors;
+  }
+
+  return true;
 };
 
 // @params tableID, userID
@@ -352,16 +396,25 @@ const exitTable = async (userID, cb) => {
 // @desc - check if currentplayer has exceeded timeout and force his exit
 // @params - tableID
 // returns errors or success message
-const forceCurrentPlayerExit = async (tableID, cb) => {
-  console.log("forced exit table, ", tableID);
+const forceCurrentPlayerExit = async (userID, cb) => {
+  console.log("forced exit table with userID, ", userID);
   let playerdeadline;
-  // set timer to 30 secs
-  let timer = 30000;
+  // get timer from db
+  let timer;
+  await db
+    .query(
+      "SELECT timeout FROM tables WHERE id =(SELECT table_id FROM user_table WHERE player_id =$1)",
+      [userID]
+    )
+    .then(dbres => {
+      timer = dbres.rows[0].timeout;
+    });
+
   let currentplayerID;
   await db
     .query(
-      "SELECT action_timestamp, player_id FROM user_table WHERE table_id =$1 and currentplayer=true",
-      [tableID]
+      "SELECT action_timestamp, player_id FROM user_table WHERE table_id =(SELECT table_id FROM user_table WHERE player_id =$1) and currentplayer=true",
+      [userID]
     )
     .then(dbres => {
       currentplayerID = dbres.rows[0].player_id;
@@ -625,27 +678,7 @@ const fillDeck = () => {
 const check = async (userID, cb) => {
   const errors = {};
   try {
-    // Disable all actions on showdown
-    const isShowdown = await checkShowdown(userID);
-    if (isShowdown) {
-      errors.notallowed = "No moves allowed after showdown";
-      throw errors;
-    }
-
-    // Do not allow action if not seated at table
-    const isNotSeated = await checkIfNotSeated(userID);
-    if (isNotSeated) {
-      errors.notallowed = "Not yet seated";
-      throw errors;
-    }
-
-    // check if it is my turn
-    const myTurn = await checkTurn(userID);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      throw errors;
-    }
+    await checkIfUserAllowed(userID);
 
     // check that the person requesting the check is allowed to check
     // if any of the other players have made bets larger than you then you can't check
@@ -683,27 +716,7 @@ const check = async (userID, cb) => {
 const fold = async (userID, cb) => {
   const errors = {};
   try {
-    // Disable all actions on showdown
-    const isShowdown = await checkShowdown(userID);
-    if (isShowdown) {
-      errors.notallowed = "No moves allowed after showdown";
-      throw errors;
-    }
-
-    // Do not allow action if not seated at table
-    const isNotSeated = await checkIfNotSeated(userID);
-    if (isNotSeated) {
-      errors.notallowed = "Not yet seated";
-      throw errors;
-    }
-
-    // check if it is my turn
-    const myTurn = await checkTurn(userID);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      throw errors;
-    }
+    await checkIfUserAllowed(userID);
 
     // add my bet to the pot
     await db.query(
@@ -733,29 +746,8 @@ const fold = async (userID, cb) => {
 // @params - user id of player doing game action - bet, cb that takes error or table json
 // returns callback
 const bet = async (userID, betAmount, cb) => {
-  const errors = {};
   try {
-    // Disable all actions on showdown
-    const isShowdown = await checkShowdown(userID);
-    if (isShowdown) {
-      errors.notallowed = "No moves allowed after showdown";
-      throw errors;
-    }
-
-    // Do not allow action if not seated at table
-    const isNotSeated = await checkIfNotSeated(userID);
-    if (isNotSeated) {
-      errors.notallowed = "Not yet seated";
-      throw errors;
-    }
-
-    // check if it is my turn
-    const myTurn = await checkTurn(userID);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      throw errors;
-    }
+    await checkIfUserAllowed(userID);
 
     // see if I have sufficient number of chips. show error if I don't
     const res = await db.query(
@@ -787,27 +779,7 @@ const bet = async (userID, betAmount, cb) => {
 const allin = async (userID, cb) => {
   const errors = {};
   try {
-    // Disable all actions on showdown
-    const isShowdown = await checkShowdown(userID);
-    if (isShowdown) {
-      errors.notallowed = "No moves allowed after showdown";
-      throw errors;
-    }
-
-    // Do not allow action if not seated at table
-    const isNotSeated = await checkIfNotSeated(userID);
-    if (isNotSeated) {
-      errors.notallowed = "Not yet seated";
-      throw errors;
-    }
-
-    // check if it is my turn
-    const myTurn = await checkTurn(userID);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      throw errors;
-    }
+    await checkIfUserAllowed(userID);
 
     // see if I have sufficient number of chips. show error if I don't
     const res = await db.query(
@@ -851,29 +823,8 @@ const getMaxBet = async userID => {
 };
 
 const call = async (userID, cb) => {
-  const errors = {};
   try {
-    // Disable all actions on showdown
-    const isShowdown = await checkShowdown(userID);
-    if (isShowdown) {
-      errors.notallowed = "No moves allowed after showdown";
-      throw errors;
-    }
-
-    // Do not allow action if not seated at table
-    const isNotSeated = await checkIfNotSeated(userID);
-    if (isNotSeated) {
-      errors.notallowed = "Not yet seated";
-      throw errors;
-    }
-
-    // check if it is my turn
-    const myTurn = await checkTurn(userID);
-    if (!myTurn) {
-      // return error if not
-      errors.notallowed = "Wrong user has made a move";
-      throw errors;
-    }
+    await checkIfUserAllowed(userID);
 
     const maxBet = await getMaxBet(userID);
 
@@ -1326,23 +1277,6 @@ const checkForEndOfRound = async userID => {
     }
   }
   return endOfRound;
-};
-
-// @desc - check if it is player's turn
-// @params - userID of player being checked
-// returns bool
-const checkTurn = async userID => {
-  const res = await db.query(
-    "SELECT id, currentplayer FROM user_table WHERE player_id = $1",
-    [userID]
-  );
-
-  // instead of error
-  if (res.rows.length !== 1) {
-    return false;
-  }
-  // if he is current player return true, else false
-  return res.rows[0].currentplayer;
 };
 
 module.exports = {

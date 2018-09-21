@@ -48,25 +48,13 @@ const init = app => {
       // if found, trigger exit table and leave room
       // validate that the table is the same for that socketid
       if (i >= 0 && activePlayers[i].tableid !== null) {
-        // exitTable(activePlayers[i].userid, returnEmit);
-        // remove that element after triggering exit table
+        // remove player from active array
         activePlayers.splice(i, 1);
 
         console.log("activePlayers when a user disconnects", activePlayers);
       }
     });
-
-    // client.on("message", handleMessage);
   });
-
-  // let msgs = [];
-  // const handleMessage = msg => {
-  //   // console.log("message: " + msg);
-  //   // add message to back end state
-  //   msgs = [...msgs, msg];
-  //   // emit all messages to chat subscribers
-  //   io.emit("chat message", msgs);
-  // };
 
   return http;
 };
