@@ -6,7 +6,7 @@ const { rankHandInt } = require("./Rank");
 // @desc find the first table in the DB. This is temporary until we add ability for multiple tables
 const findTable = async tableID => {
   const { rows } = await db.query(
-    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status FROM tables WHERE id = $1",
+    "SELECT id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status, timeout FROM tables WHERE id = $1",
     [tableID]
   );
 
@@ -320,6 +320,30 @@ const getTable = async (userID, cb) => {
 
     table = await findTable(alreadyAtTable);
     table.players = await getPlayersAtTable(alreadyAtTable, userID);
+
+    // check if any user at table is timed out
+    let isTimedOut = false;
+    let timedOutPlayer = table.players.find(player => {
+      const timestamp = player.action_timestamp;
+      timestamp !== null
+        ? (isTimedOut =
+            new Date(timestamp).getTime() + table.timeout <= Date.now())
+        : null;
+      return isTimedOut;
+    });
+
+    if (isTimedOut) {
+      let timedOutPlayerID;
+      await db
+        .query("SELECT id FROM users WHERE username=$1", [
+          timedOutPlayer.username
+        ])
+        .then(res => {
+          timedOutPlayerID = res.rows[0].id;
+        });
+      return await exitTable(timedOutPlayerID, cb);
+    }
+
     return cb(null, table, table.id);
   } catch (e) {
     return cb(e, null);

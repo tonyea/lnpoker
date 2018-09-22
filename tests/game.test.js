@@ -1853,7 +1853,7 @@ describe("Game Tests", () => {
     // wait for timeout - update timestamp to future
     await db.query("UPDATE tables SET timeout = 0 WHERE id = $1", [tableID]);
 
-    // p2 attempts action and fails - but the app immediately calls forcecurrentplayer exit which should return success
+    // p2 attempts action and fails - but the app immediately calls exittable on p2 which should return success
     await request(app)
       .post("/api/game/call")
       .set("Authorization", players[1].token)
@@ -1875,6 +1875,73 @@ describe("Game Tests", () => {
 
     // p1 gets kicked out because he was last player - get gameover message
     await request(app)
+      .get("/api/game/")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(400);
+        expect(res.body).toEqual("Not in an active game");
+      });
+
+    await db.query("SELECT * FROM user_table").then(dbres => {
+      expect(dbres.rows.length).toBe(0);
+    });
+
+    await db.query("SELECT * FROM tables").then(dbres => {
+      expect(dbres.rows.length).toBe(0);
+    });
+
+    // p1 has +1000 in bank
+    // p1 + p2 is same as when game started
+    await db
+      .query("SELECT username, bank FROM users ORDER BY id")
+      .then(dbres => {
+        const p1BankPost = dbres.rows[0].bank;
+        const p2BankPost = dbres.rows[1].bank;
+
+        expect(p1BankPost).toBe(p1BankInitial + 1000);
+        expect(p2BankPost).toBe(p2BankInitial - 1000);
+        expect(p1BankPost + p2BankPost).toBe(p2BankInitial + p1BankInitial);
+      });
+  });
+
+  // testing a DB based timer system when p1 has timed out and doesn't refresh or commit an action. P2 just waits for timeout, should win pot
+  test("User timed out, opponent wins pot without any action", async () => {
+    // get p1, p2 bank
+    let p1BankInitial, p2BankInitial;
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[0].playerName
+      ])
+      .then(res => (p1BankInitial = res.rows[0].bank));
+
+    await db
+      .query("SELECT bank FROM users WHERE username = $1", [
+        players[1].playerName
+      ])
+      .then(res => (p2BankInitial = res.rows[0].bank));
+
+    // p1 creates a game
+    let tableID;
+    let buyin = 12000;
+    await createGame(players[0], buyin).then(res => (tableID = res.body.id));
+    // p2 joins a game
+    await joinGame(players[1], tableID);
+
+    // wait for timeout - update timestamp to future
+    await db.query("UPDATE tables SET timeout = 0 WHERE id = $1", [tableID]);
+
+    // p1 refreshes game - visits /api/game - p2 gets kicked out and is not visible in response
+    // p1 gets kicked out because he was last player
+    await request(app)
+      .get("/api/game/")
+      .set("Authorization", players[0].token)
+      .send()
+      .then(res => {
+        expect(res.statusCode).toBe(200);
+        expect(res.body.gameover).toEqual("Success");
+      });
+      await request(app)
       .get("/api/game/")
       .set("Authorization", players[1].token)
       .send()
@@ -1903,23 +1970,7 @@ describe("Game Tests", () => {
         expect(p2BankPost).toBe(p2BankInitial - 1000);
         expect(p1BankPost + p2BankPost).toBe(p2BankInitial + p1BankInitial);
       });
-
   });
-
-
-    // testing a DB based timer system when p1 has timed out and doesn't refresh or commit an action. P2 just waits for timeout, should win pot
-    test("User timed out, opponent wins pot without any action", async () => {
-
-    //----------------
-    // p1 creates a game
-    // p2 joins a game
-    // wait for timeout - update timestamp to future
-    // p1 refreshes game - visits /api/game
-    // p2 gets kicked out and is not visible in response
-    // p1 gets kicked out because he was last player - get gameover message
-    // p1 has +1000 in bank
-    // p1 + p2 is same as when game started
-    }
 
   // test all in player against part in - same as above but player 2 has less than max bet
   // test if winner has a part in 100 out of 300 in his roundBets against 1 player. i.e. His winnings should be +100 not +200. 100 should be returned to other player
