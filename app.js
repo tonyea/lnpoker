@@ -19,6 +19,12 @@ if (process.env.NODE_ENV !== "test") {
   );
 }
 
+// // testing grpc
+// const lnrpc = require("./ln-grpc");
+// lnrpc.getInfo({}, (err, res) => {
+//   console.log(res);
+// });
+
 // Body parser middleware
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
