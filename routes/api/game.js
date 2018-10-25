@@ -105,7 +105,7 @@ router.post(
 const returnResult = (req, res) => {
   return (errors, resultFromCaller = {}, tableID = null) => {
     const io = req.app.get("socketio");
-    const ee = req.app.get("eventemitter");
+    // const ee = req.app.get("eventemitter");
     if (errors) {
       // if error is "timedout" then force currentplayer exit, else return error as is
       if (errors.timedout) {
