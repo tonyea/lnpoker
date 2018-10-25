@@ -2,7 +2,6 @@ import React, { PureComponent } from "react";
 import Card from "./Card";
 import axios from "axios";
 import { connect } from "react-redux";
-import PropTypes from "prop-types";
 
 class Player extends PureComponent {
   constructor(props) {
@@ -162,11 +161,6 @@ class Player extends PureComponent {
     );
   }
 }
-
-Player.propTypes = {
-  myInfo: PropTypes.object.isRequired,
-  disabledstate: PropTypes.bool.isRequired
-};
 
 // filter out opponents info from players to get my info
 const mapStateToProps = state => ({

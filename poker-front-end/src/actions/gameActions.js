@@ -1,6 +1,6 @@
 import {
-  REQUEST_GAME_DATA,
   RECEIVE_GAME_DATA,
+  SET_ROUND_MESSAGE,
   GET_ERRORS,
   ADD_MESSAGE,
   MESSAGE_RECEIVE_SUCCESS
@@ -8,9 +8,8 @@ import {
 
 import axios from "axios";
 
+// update game data in store
 export const fetchGameData = () => async dispatch => {
-  dispatch(requestGameData());
-
   try {
     const res = await axios.get("/api/game");
     dispatch(receiveGameData(res.data));
@@ -21,6 +20,12 @@ export const fetchGameData = () => async dispatch => {
     });
   }
 };
+
+// update round message in state
+export const setRoundMessage = msg => ({
+  type: SET_ROUND_MESSAGE,
+  roundMessage: msg
+});
 
 export const exitGame = () => async dispatch => {
   // update local game state
@@ -41,15 +46,7 @@ const receiveGameData = gameFromServer => ({
   game: gameFromServer
 });
 
-// Game loading
-const requestGameData = () => {
-  return {
-    type: REQUEST_GAME_DATA
-  };
-};
-
 // Chat component actions
-
 export const receiveMessages = msgs => ({
   type: MESSAGE_RECEIVE_SUCCESS,
   logs: msgs

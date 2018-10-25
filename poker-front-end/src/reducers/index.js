@@ -2,7 +2,7 @@ import { combineReducers } from "redux";
 import authReducer from "./authReducer";
 import errorReducer from "./errorReducer";
 import chatReducer from "./chatReducer";
-import gameReducer, * as fromGame from "./gameReducer";
+import gameReducer from "./gameReducer";
 
 export default combineReducers({
   auth: authReducer,
@@ -10,8 +10,3 @@ export default combineReducers({
   chat: chatReducer,
   game: gameReducer
 });
-
-// top level selectors
-export const getIsFetching = state => {
-  fromGame.getIsFetching(state.game);
-};
