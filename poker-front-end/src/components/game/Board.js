@@ -1,5 +1,7 @@
 import React from "react";
 import Card from "./Card";
+import { connect } from "react-redux";
+import PropTypes from "prop-types";
 
 const Board = props => {
   const renderCard = (cardType, key) => {
@@ -73,4 +75,24 @@ const Board = props => {
   );
 };
 
-export default Board;
+Board.propTypes = {
+  id: PropTypes.string.isRequired,
+  smallblind: PropTypes.number.isRequired,
+  bigblind: PropTypes.number.isRequired,
+  pot: PropTypes.number.isRequired,
+  board: PropTypes.array.isRequired
+};
+
+const mapStateToProps = state => ({
+  id: state.game.id,
+  smallblind: state.game.smallblind,
+  bigblind: state.game.bigblind,
+  pot: state.game.pot,
+  board: state.game.board,
+  roundMessage: {} //state.game.roundmessage
+});
+
+export default connect(
+  mapStateToProps,
+  null
+)(Board);

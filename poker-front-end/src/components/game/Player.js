@@ -1,8 +1,10 @@
 import React, { PureComponent } from "react";
 import Card from "./Card";
 import axios from "axios";
+import { connect } from "react-redux";
+import PropTypes from "prop-types";
 
-export default class Player extends PureComponent {
+class Player extends PureComponent {
   constructor(props) {
     super(props);
 
@@ -160,3 +162,23 @@ export default class Player extends PureComponent {
     );
   }
 }
+
+Player.propTypes = {
+  myInfo: PropTypes.object.isRequired,
+  disabledstate: PropTypes.bool.isRequired
+};
+
+// filter out opponents info from players to get my info
+const mapStateToProps = state => ({
+  myInfo: state.game.players
+    ? state.game.players.find(
+        player => player.username === state.auth.user.username
+      )
+    : [],
+  disabledstate: state.game.roundname === "Showdown" // || state.game.roundmessage.winner || state.game.roundmessage.bankrupt
+});
+
+export default connect(
+  mapStateToProps,
+  null
+)(Player);

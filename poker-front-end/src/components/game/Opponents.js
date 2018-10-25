@@ -1,5 +1,6 @@
 import React from "react";
 import Opponent from "./Opponent";
+import { connect } from "react-redux";
 import PropTypes from "prop-types";
 
 const Opponents = props => {
@@ -41,4 +42,16 @@ Opponents.propTypes = {
   ).isRequired
 };
 
-export default Opponents;
+const mapStateToProps = state => ({
+  opponents: state.game.players
+    ? state.game.players.filter(
+        player => player.username !== state.auth.user.username
+      )
+    : [],
+  disabledstate: state.roundname === "Showdown" // || state.roundmessage.winner || state.roundmessage.bankrupt
+});
+
+export default connect(
+  mapStateToProps,
+  null
+)(Opponents);

@@ -2,11 +2,11 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
-import { connect } from "react-redux";
 import * as actions from "../../actions/gameActions";
 import { getIsFetching } from "../../reducers";
-import PropTypes from "prop-types";
 import { Prompt } from "react-router-dom";
+import { connect } from "react-redux";
+import PropTypes from "prop-types";
 
 // socket
 import io from "socket.io-client";
@@ -32,14 +32,14 @@ class Table extends Component {
       console.log("client socket id on connect", this.state.socket.id);
     });
 
-    this.state.socket.on("round message", msg =>
-      this.setState({ roundmessage: msg })
-    );
+    // this.state.socket.on("round message", msg =>
+    //   this.setState({ roundmessage: msg })
+    // );
 
     this.state.socket.on("table updated", () => {
       console.log("table updated");
       this.props.fetchGameData();
-      this.setState({ roundmessage: {} });
+      // this.setState({ roundmessage: {} });
     });
   }
 
@@ -52,24 +52,12 @@ class Table extends Component {
   render() {
     console.log("rendered");
 
-    const { user } = this.props;
-    const { players, isFetching, roundname, ...rest } = this.props.game;
+    // const { isFetching, smallblind } = this.props.game;
 
-    // bool to decide whether to show buttons
-    const disabledstate =
-      roundname === "Showdown" ||
-      this.state.roundmessage.winner ||
-      this.state.roundmessage.bankrupt;
-
-    // loading indicator
-    if (isFetching || !rest.smallblind) {
-      return <p> Loading </p>;
-    }
-
-    // filter out my info from players to get opponents info
-    const opponents = players.filter(player => player.username !== user.name);
-    // filter out opponents info from players to get my info
-    const myInfo = players.find(player => player.username === user.name);
+    // // // loading indicator
+    // if (isFetching || !smallblind) {
+    //   return <p> Loading </p>;
+    // }
 
     return (
       <div className="container table-container">
@@ -78,24 +66,24 @@ class Table extends Component {
             `Leaving a game might lead to loss of blinds and bets placed. Are you sure?`
           }
         />
-        <Opponents opponents={opponents} disabledstate={disabledstate} />
+        <Opponents />
 
-        <Board {...rest} roundMessage={this.state.roundmessage} />
+        <Board />
 
-        <Player myInfo={myInfo} disabledstate={disabledstate} />
+        <Player />
       </div>
     );
   }
 }
 
 Table.propTypes = {
-  fetchGameData: PropTypes.func.isRequired,
-  user: PropTypes.object.isRequired
+  fetchGameData: PropTypes.func.isRequired
+  // user: PropTypes.object.isRequired
 };
 
 const mapStateToProps = state => ({
   game: state.game,
-  isFetching: getIsFetching(state),
+  // isFetching: getIsFetching(state),
   user: {
     id: state.auth.user.id,
     name: state.auth.user.username
