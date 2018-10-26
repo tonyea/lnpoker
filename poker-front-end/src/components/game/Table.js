@@ -42,6 +42,7 @@ class Table extends Component {
     // notification from socket that DB has been update shoudl refresh store
     this.state.socket.on("table updated", () => {
       console.log("table updated");
+      // debugger;
       this.props.fetchGameData();
       this.props.setRoundMessage({});
     });
