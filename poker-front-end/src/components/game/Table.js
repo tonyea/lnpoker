@@ -2,7 +2,7 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
-import * as actions from "../../actions/gameActions";
+import { fetchGameData, setRoundMessage } from "../../actions/gameActions";
 import { Prompt } from "react-router-dom";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
@@ -35,9 +35,9 @@ class Table extends Component {
     });
 
     // set round message on winner, bankrupt etc.
-    this.state.socket.on("round message", msg =>
-      this.props.setRoundMessage(msg)
-    );
+    this.state.socket.on("round message", msg => {
+      this.props.setRoundMessage(msg);
+    });
 
     // notification from socket that DB has been update shoudl refresh store
     this.state.socket.on("table updated", () => {
@@ -87,7 +87,12 @@ const mapStateToProps = state => ({
   }
 });
 
+const mapDispatchToProps = dispatch => ({
+  setRoundMessage: msg => dispatch(setRoundMessage(msg)),
+  fetchGameData: () => dispatch(fetchGameData())
+});
+
 export default connect(
   mapStateToProps,
-  actions
+  mapDispatchToProps
 )(Table);
