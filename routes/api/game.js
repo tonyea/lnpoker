@@ -146,16 +146,13 @@ const returnResult = (req, res) => {
           .emit("gameover");
       }, 3000);
     }
-    // // emit an event (node events) to the socket which can store currentplayer user id and his timestamp
-    // if (resultFromCaller.status === "started" && resultFromCaller.players) {
-    //   const currentPlayer = resultFromCaller.players.find(
-    //     player => player.currentplayer
-    //   );
-
-    //   if (currentPlayer && currentPlayer.action_timestamp !== null) {
-    //     ee.emitCurrentPlayer(tableID, currentPlayer.action_timestamp);
-    //   }
-    // }
+    // emit an event to Alice socket when Bob joins the game
+    const path = req.url.substring(1, 5);
+    if (resultFromCaller.status === "started" && path === "join") {
+      io.of("/game")
+        .to(tableID)
+        .emit("table updated");
+    }
     return res.json(resultFromCaller);
   };
 };
