@@ -41,7 +41,12 @@ export default ({ playerInfo, disabledstate }) => {
             </div>
           ) : null}
         </div>
-        <div className="card-footer text-muted">{playerInfo.chips} Sats</div>
+        {playerInfo.bet > 0 ? (
+          <p className="card-text">Bet: {playerInfo.bet}</p>
+        ) : null}
+        <div className="card-footer text-muted">
+          Bal: {playerInfo.chips} Sats
+        </div>
       </div>
     </div>
   );

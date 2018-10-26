@@ -100,7 +100,7 @@ class Player extends PureComponent {
               </div>
               {bet > 0 ? <p className="card-text">Bet: {bet}</p> : null}
             </div>
-            <div className="card-footer text-muted">{chips} Sats</div>
+            <div className="card-footer text-muted">Bal: {chips} Sats</div>
           </div>
         </div>
 
