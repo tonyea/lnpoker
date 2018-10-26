@@ -53,6 +53,7 @@ class Player extends PureComponent {
     } = this.props.myInfo;
 
     const { disabledstate } = this.props;
+    const isMaxBet = bet === this.props.maxbet;
 
     const renderCard = (cardInfo, cardKey) => {
       return <Card card={cardInfo} key={cardKey} />;
@@ -109,7 +110,7 @@ class Player extends PureComponent {
             type="button"
             className="btn btn-outline-secondary"
             onClick={this.checkGame}
-            disabled={!currentplayer || disabledstate}
+            disabled={!currentplayer || disabledstate || !isMaxBet}
           >
             Check
           </button>
@@ -169,6 +170,11 @@ const mapStateToProps = state => ({
         player => player.username === state.auth.user.username
       )
     : [],
+  maxbet: state.game.players
+    ? state.game.players.reduce(
+        (prev, current) => (prev.bet > current.bet ? prev.bet : current.bet)
+      )
+    : 0,
   disabledstate: state.game.roundname === "Showdown" // || state.game.roundmessage.winner || state.game.roundmessage.bankrupt
 });
 
