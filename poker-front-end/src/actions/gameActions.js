@@ -10,7 +10,6 @@ import axios from "axios";
 
 // update game data in store
 export const fetchGameData = () => async dispatch => {
-  console.log("test");
   try {
     const res = await axios.get("/api/game");
     dispatch(receiveGameData(res.data));

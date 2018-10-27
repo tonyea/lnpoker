@@ -49,7 +49,8 @@ class Player extends PureComponent {
       bet,
       currentplayer,
       isSmallBlind,
-      isBigBlind
+      isBigBlind,
+      lastaction
     } = this.props.myInfo;
 
     const { disabledstate } = this.props;
@@ -69,6 +70,14 @@ class Player extends PureComponent {
       return <div>Waiting for new round</div>;
     }
 
+    let actionState = <div>Waiting</div>;
+    if (currentplayer && !disabledstate) {
+      actionState = <div>My Turn</div>;
+    }
+    if (lastaction === "fold") {
+      actionState = <div>Folded</div>;
+    }
+
     return (
       <div className="row player-row">
         <div
@@ -81,13 +90,7 @@ class Player extends PureComponent {
           <div className="card text-center">
             <div className="card-header">{username}</div>
             <div className="card-body">
-              <h5 className="card-title">
-                {currentplayer && !disabledstate ? (
-                  <div>My Turn</div>
-                ) : (
-                  <div>Waiting</div>
-                )}
-              </h5>
+              <h5 className="card-title">{actionState}</h5>
               <div className="tokens row mb-2">
                 {dealer ? <div className="card-text tokens-d">D</div> : null}
 

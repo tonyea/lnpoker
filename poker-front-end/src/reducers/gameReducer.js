@@ -10,7 +10,7 @@ const gameReducer = (state = initialState, action) => {
     case RECEIVE_GAME_DATA:
       return { ...state, ...action.game };
     case SET_ROUND_MESSAGE:
-      return { ...state, roundMessage: { ...action.msg } };
+      return { ...state, roundMessage: { ...action.roundMessage } };
     default:
       return state;
   }

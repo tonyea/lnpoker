@@ -8,6 +8,7 @@ const Board = props => {
   };
 
   const { id, smallblind, bigblind, pot, board, roundMessage } = props;
+  console.log("roundMessage", roundMessage);
   const cardRows = [];
   for (const key in board) {
     const element = board[key];
@@ -19,7 +20,7 @@ const Board = props => {
   };
 
   const messageRows = [];
-  if (roundMessage.winner && roundMessage.winner.length === 1) {
+  if (roundMessage && roundMessage.winner && roundMessage.winner.length === 1) {
     for (const key in roundMessage.winner) {
       const winner = roundMessage.winner[key];
       messageRows.push(
@@ -27,7 +28,7 @@ const Board = props => {
       );
     }
   }
-  if (roundMessage.winner && roundMessage.winner.length > 1) {
+  if (roundMessage && roundMessage.winner && roundMessage.winner.length > 1) {
     let winnerNames = [];
     for (const key in roundMessage.winner) {
       winnerNames.push(roundMessage.winner[key].playerName);
@@ -36,7 +37,11 @@ const Board = props => {
       renderMessage(winnerNames.join(", ") + " win the pot", messageRows.length)
     );
   }
-  if (roundMessage.bankrupt && roundMessage.bankrupt.length === 1) {
+  if (
+    roundMessage &&
+    roundMessage.bankrupt &&
+    roundMessage.bankrupt.length === 1
+  ) {
     for (const key in roundMessage.bankrupt) {
       const bankrupt = roundMessage.bankrupt[key];
       messageRows.push(
@@ -44,7 +49,11 @@ const Board = props => {
       );
     }
   }
-  if (roundMessage.bankrupt && roundMessage.bankrupt.length > 1) {
+  if (
+    roundMessage &&
+    roundMessage.bankrupt &&
+    roundMessage.bankrupt.length > 1
+  ) {
     let bankruptNames = [];
     for (const key in roundMessage.bankrupt) {
       bankruptNames.push(roundMessage.bankrupt[key].playerName);
@@ -80,7 +89,7 @@ const mapStateToProps = state => ({
   bigblind: state.game.bigblind,
   pot: state.game.pot,
   board: state.game.board,
-  roundMessage: {} //state.game.roundmessage
+  roundMessage: state.game.roundMessage
 });
 
 export default connect(

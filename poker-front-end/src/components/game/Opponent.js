@@ -10,6 +10,9 @@ export default ({ playerInfo, disabledstate }) => {
   } else if (!playerInfo.seated) {
     myclass = "col-sm text-sm-center player-transparent";
     mydiv = <div>To be seated</div>;
+  } else if (playerInfo.lastaction === "fold") {
+    myclass = "col-sm text-sm-center";
+    mydiv = <div>Folded</div>;
   } else {
     myclass = "col-sm text-sm-center";
     mydiv = <div>Waiting</div>;
