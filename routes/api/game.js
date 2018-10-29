@@ -29,6 +29,8 @@ router.get(
 // @desc    Get game information that user is active on
 // @access  Public
 router.get("/all", (req, res) => {
+  const gameEvents = req.app.get("eventEmitter");
+  gameEvents.joinedGame("test", "test1");
   all(returnResult(req, res));
 });
 

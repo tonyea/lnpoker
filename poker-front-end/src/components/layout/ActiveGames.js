@@ -17,11 +17,21 @@ class ActiveGames extends Component {
 
   componentDidMount = async () => {
     await axios.get("/api/game/all").then(res => {
+      console.log("component did mount refreshing list of games");
       if (res.status === 200) {
         this.setState({ activegames: res.data });
       }
     });
   };
+
+  // componentDidUpdate = async () => {
+  //   await axios.get("/api/game/all").then(res => {
+  //     console.log("component did update refreshing list of games");
+  //     if (res.status === 200) {
+  //       this.setState({ activegames: res.data });
+  //     }
+  //   });
+  // };
 
   joinGame = async () => {
     // check if auth

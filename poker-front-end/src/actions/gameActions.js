@@ -31,7 +31,7 @@ export const exitGame = () => async dispatch => {
   // update local game state
   dispatch(receiveGameData({}));
   try {
-    await axios.post("api/game/leave");
+    await axios.post("api/game/exit");
     // console.log(res);
   } catch (error) {
     dispatch({

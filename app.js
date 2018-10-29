@@ -19,6 +19,19 @@ if (process.env.NODE_ENV !== "test") {
   );
 }
 
+const gameEvents = require("./events/GameEvents")(app);
+// const gameEvents = new GameEvents();
+
+// gameEvents.on("joinedGame", arg => {
+//   console.log(`${arg.userID} has joined table # ${arg.tableID}`);
+//   // send socket emit to all users at table that a user has joined a table
+
+//   // send update to landing page that table has been updated
+// });
+
+app.set("eventEmitter", gameEvents);
+// gameEvents.joinedGame("test", "test1");
+
 // // testing grpc
 // const lnrpc = require("./ln-grpc");
 // lnrpc.getInfo({}, (err, res) => {

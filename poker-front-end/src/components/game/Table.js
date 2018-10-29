@@ -2,7 +2,11 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
-import { fetchGameData, setRoundMessage } from "../../actions/gameActions";
+import {
+  fetchGameData,
+  setRoundMessage,
+  exitGame
+} from "../../actions/gameActions";
 import { Prompt } from "react-router-dom";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
@@ -50,7 +54,7 @@ class Table extends Component {
 
   componentWillUnmount() {
     // remove player from state when leaving table
-    // this.props.exitGame();
+    this.props.exitGame();
     console.log("client socket id on disconnect", this.state.socket.id);
     this.state.socket.disconnect(this.props.game.id);
   }
@@ -89,7 +93,8 @@ const mapStateToProps = state => ({
 
 const mapDispatchToProps = dispatch => ({
   setRoundMessage: msg => dispatch(setRoundMessage(msg)),
-  fetchGameData: () => dispatch(fetchGameData())
+  fetchGameData: () => dispatch(fetchGameData()),
+  exitGame: () => dispatch(exitGame())
 });
 
 export default connect(
