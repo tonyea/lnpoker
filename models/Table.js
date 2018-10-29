@@ -20,7 +20,7 @@ const findTable = async tableID => {
 // @params NA
 // @return table object without players array
 // @desc create a new table using default params instead of destructuring table arguments, start new round
-const createNewTable = async (userID, buyin, cb) => {
+const createNewTable = async (userID, buyin, emitter, cb) => {
   let tableID;
   try {
     if (await isPlayerOnTable(userID)) {
@@ -35,7 +35,7 @@ const createNewTable = async (userID, buyin, cb) => {
       .then(res => (tableID = res.rows[0].id));
 
     // auto join newly created table
-    await joinTable(tableID, userID, cb);
+    await joinTable(tableID, userID, emitter, cb);
   } catch (e) {
     return cb(e, null);
   }
@@ -83,7 +83,7 @@ const all = async cb => {
 // @params tableID, userID and cb
 // @return cb with table object or error
 // @desc add user's id to user_table and distribute his cards from deck
-const joinTable = async (tableID, userID, cb) => {
+const joinTable = async (tableID, userID, emitter, cb) => {
   let table;
   try {
     const alreadyAtTable = await isPlayerOnTable(userID);
@@ -126,6 +126,7 @@ const joinTable = async (tableID, userID, cb) => {
     // check if we have minimum number of players
     if (numplayers < minplayers) {
       table.players = await getPlayersAtTable(table.id, userID);
+      emitter.joinedGame(userID, tableID);
       return cb(null, table, tableID);
     }
 

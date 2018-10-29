@@ -29,8 +29,7 @@ router.get(
 // @desc    Get game information that user is active on
 // @access  Public
 router.get("/all", (req, res) => {
-  const gameEvents = req.app.get("eventEmitter");
-  gameEvents.joinedGame("test", "test1");
+  // gameEvents.joinedGame("test", "test1");
   all(returnResult(req, res));
 });
 
@@ -41,7 +40,12 @@ router.post(
   "/create/:buyin",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    createNewTable(req.user.id, req.params.buyin, returnResult(req, res));
+    createNewTable(
+      req.user.id,
+      req.params.buyin,
+      req.app.get("eventEmitter"),
+      returnResult(req, res)
+    );
   }
 );
 
@@ -52,7 +56,12 @@ router.post(
   "/join/:tableID",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    joinTable(req.params.tableID, req.user.id, returnResult(req, res));
+    joinTable(
+      req.params.tableID,
+      req.user.id,
+      req.app.get("eventEmitter"),
+      returnResult(req, res)
+    );
   }
 );
 // @route   POST api/game/check

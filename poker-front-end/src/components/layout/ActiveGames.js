@@ -15,7 +15,7 @@ class ActiveGames extends Component {
     this.joinGame = this.joinGame.bind(this);
   }
 
-  componentDidMount = async () => {
+  getActiveGames = async () => {
     await axios.get("/api/game/all").then(res => {
       console.log("component did mount refreshing list of games");
       if (res.status === 200) {
@@ -24,14 +24,13 @@ class ActiveGames extends Component {
     });
   };
 
-  // componentDidUpdate = async () => {
-  //   await axios.get("/api/game/all").then(res => {
-  //     console.log("component did update refreshing list of games");
-  //     if (res.status === 200) {
-  //       this.setState({ activegames: res.data });
-  //     }
-  //   });
-  // };
+  componentDidMount() {
+    this.interval = setInterval(this.getActiveGames, 10000);
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.interval);
+  }
 
   joinGame = async () => {
     // check if auth
