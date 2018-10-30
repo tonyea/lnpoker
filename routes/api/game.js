@@ -119,7 +119,7 @@ router.post(
 
 // callback function that returns error or emit's success response to socket clients. It uses closure scope to get req and res
 const returnResult = (req, res) => {
-  return (errors, resultFromCaller = {}, tableID = null) => {
+  return (errors, resultFromCaller = {}) => {
     const io = req.app.get("socketio");
     // const ee = req.app.get("eventemitter");
     if (errors) {
@@ -146,16 +146,16 @@ const returnResult = (req, res) => {
     // }
     // trigger init new round if winner
 
-    if (resultFromCaller.winner) {
-      console.log(resultFromCaller.winner);
-      setTimeout(() => {
-        initNewRound(req.user.id).then(res => {
-          io.of("/game")
-            .in(tableID)
-            .emit("table updated");
-        });
-      }, 3000);
-    }
+    // if (resultFromCaller.winner) {
+    //   console.log(resultFromCaller.winner);
+    //   setTimeout(() => {
+    //     initNewRound(req.user.id).then(res => {
+    //       io.of("/game")
+    //         .in(tableID)
+    //         .emit("table updated");
+    //     });
+    //   }, 3000);
+    // }
 
     // send message before kicking out last player
     // if (resultFromCaller.gameover) {

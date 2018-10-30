@@ -89,7 +89,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
       // we're using tableIDwithPlayer (tableid) because it might be different from the one the user is trying to join. i.e. If the user tries to join a second table, he is returned to his first
       table = await findTableByID(tableIDwithPlayer);
       table.players = await getPlayersAtTable(tableIDwithPlayer, userID);
-      return cb(null, table, tableID);
+      return cb(null, table);
     }
     // if max users are already seated then throw error
     let minplayers, maxplayers, numplayers;
@@ -128,7 +128,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
     if (numplayers < minplayers) {
       table.players = await getPlayersAtTable(table.id, userID);
       emitter.joinedGame(userID, tableID);
-      return cb(null, table, tableID);
+      return cb(null, table);
     }
 
     // continuing, if we do have minplayers
@@ -159,7 +159,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
     }
     table.players = await getPlayersAtTable(tableID, userID);
     emitter.joinedGame(userID, tableID);
-    return cb(null, table, tableID);
+    return cb(null, table);
   } catch (e) {
     return cb(e, null);
   }
@@ -205,7 +205,7 @@ const getTable = async (userID, cb) => {
       return await exitTable(timedOutPlayerID, cb);
     }
 
-    return cb(null, table, table.id);
+    return cb(null, table);
   } catch (e) {
     return cb(e, null);
   }
@@ -250,13 +250,9 @@ const exitTable = async (userID, emitter, cb) => {
 
     // if number of players remaining, seated or unseated, is 1 then kick him out and then send message to user that he has been kicked out
     if (remainingPlayers.length === 1) {
-      return cb(
-        null,
-        {
-          gameover: await kickLastPlayer(dbres.rows[0].player_id)
-        },
-        tableID
-      );
+      return cb(null, {
+        gameover: await kickLastPlayer(dbres.rows[0].player_id)
+      });
     } else if (remainingPlayers.length === 0) {
       // deleting table if player 1 joins and leaves without getting other players
       await db.query("DELETE FROM tables WHERE id = $1", [tableID]);
@@ -275,7 +271,7 @@ const exitTable = async (userID, emitter, cb) => {
       await initNewRound(remainingSeatedPlayers[0].player_id);
     }
 
-    return cb(null, "Success", tableID);
+    return cb(null, "Success");
   } catch (e) {
     return cb(e, null);
   }
@@ -314,7 +310,7 @@ const check = async (userID, emitter, cb) => {
       // let table know that a user has taken an action
       emitter.gameAction(tableID);
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID), res.rows[0].table_id);
+      return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -349,7 +345,7 @@ const fold = async (userID, emitter, cb) => {
       // let table know that a user has taken an action
       emitter.gameAction(res.rows[0].table_id);
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID), res.rows[0].table_id);
+      return cb(null, await progress(userID));
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -395,7 +391,7 @@ const bet = async (userID, betAmount, emitter, cb) => {
     // let table know that a user has taken an action
     emitter.gameAction(tableID);
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID), tableID);
+    return cb(null, await progress(userID));
   } catch (e) {
     return cb(e, null);
   }
@@ -438,7 +434,7 @@ const allin = async (userID, emitter, cb) => {
     await progress(userID);
     // let table know that a user has taken an action
     emitter.gameAction(tableID);
-    return cb(null, "All In", tableID);
+    return cb(null, "All In");
   } catch (e) {
     return cb(e, null);
   }
@@ -480,7 +476,7 @@ const call = async (userID, emitter, cb) => {
     // let table know that a user has taken an action
     emitter.gameAction(tableID);
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID), tableID);
+    return cb(null, await progress(userID));
     //Attemp to progress the game
   } catch (e) {
     // errors.notallowed = "Bet not allowed, replay please";
