@@ -17,6 +17,7 @@ const init = app => {
     // console.log("users and rooms", activePlayers);
 
     client.on("room", (tableid, userid) => {
+      console.log("Got connected!", userNum);
       // if user is already in array of active players then update his socket id
       const playerIndex = activePlayers.findIndex(
         activePlayer => activePlayer.userid === userid
@@ -35,7 +36,8 @@ const init = app => {
           socketid: client.id
         });
       }
-      // console.log("a user joined room", activePlayers);
+
+      console.log("activePlayers when a user connects", activePlayers);
     });
 
     client.on("disconnect", tableid => {

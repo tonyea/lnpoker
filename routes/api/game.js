@@ -12,7 +12,7 @@ const {
   exitTable,
   initNewRound,
   all
-} = require("../../models/Table");
+} = require("../../services/TableService");
 
 // @route   GET api/game
 // @desc    Get game information that user is active on
@@ -72,7 +72,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // check if it is player's turn
-    check(req.user.id, returnResult(req, res));
+    check(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
   }
 );
 
@@ -84,7 +84,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // fold if it is player's turn
-    fold(req.user.id, returnResult(req, res));
+    fold(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
   }
 );
 
@@ -96,7 +96,12 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // bet if it is player's turn
-    bet(req.user.id, req.params.amount, returnResult(req, res));
+    bet(
+      req.user.id,
+      req.params.amount,
+      req.app.get("eventEmitter"),
+      returnResult(req, res)
+    );
   }
 );
 
@@ -108,7 +113,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // call if it is player's turn
-    call(req.user.id, returnResult(req, res));
+    call(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
   }
 );
 
@@ -127,18 +132,20 @@ const returnResult = (req, res) => {
       }
     }
     // emit a status update to all players at the table that the table has changed. it will also return the response as is
-    if (resultFromCaller === "Success") {
-      io.of("/game")
-        .in(tableID)
-        .emit("table updated");
-    }
+    // if (resultFromCaller === "Success") {
+    //   io.of("/game")
+    //     .in(tableID)
+    //     .emit("table updated");
+    // }
+
     // if round message received emit to table
-    if (resultFromCaller.winner || resultFromCaller.bankrupt) {
-      io.of("/game")
-        .in(tableID)
-        .emit("round message", resultFromCaller);
-    }
+    // if (resultFromCaller.winner || resultFromCaller.bankrupt) {
+    //   io.of("/game")
+    //     .in(tableID)
+    //     .emit("round message", resultFromCaller);
+    // }
     // trigger init new round if winner
+
     if (resultFromCaller.winner) {
       console.log(resultFromCaller.winner);
       setTimeout(() => {
@@ -149,21 +156,23 @@ const returnResult = (req, res) => {
         });
       }, 3000);
     }
+
     // send message before kicking out last player
-    if (resultFromCaller.gameover) {
-      setTimeout(() => {
-        io.of("/game")
-          .in(tableID)
-          .emit("gameover");
-      }, 3000);
-    }
+    // if (resultFromCaller.gameover) {
+    //   setTimeout(() => {
+    //     io.of("/game")
+    //       .in(tableID)
+    //       .emit("gameover");
+    //   }, 3000);
+    // }
     // emit an event to Alice socket when Bob joins the game
-    const path = req.url.substring(1, 5);
-    if (resultFromCaller.status === "started" && path === "join") {
-      io.of("/game")
-        .to(tableID)
-        .emit("table updated");
-    }
+
+    // const path = req.url.substring(1, 5);
+    // if (resultFromCaller.status === "started" && path === "join") {
+    //   io.of("/game")
+    //     .to(tableID)
+    //     .emit("table updated");
+    // }
     return res.json(resultFromCaller);
   };
 };
@@ -175,7 +184,7 @@ router.post(
   "/exit",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    exitTable(req.user.id, returnResult(req, res));
+    exitTable(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
     console.log("exited");
   }
 );

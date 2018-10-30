@@ -25,7 +25,7 @@ class ActiveGames extends Component {
   };
 
   componentDidMount() {
-    this.interval = setInterval(this.getActiveGames, 10000);
+    this.interval = setInterval(this.getActiveGames, 5000);
   }
 
   componentWillUnmount() {

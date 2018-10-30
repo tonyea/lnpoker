@@ -32,7 +32,9 @@ class Table extends Component {
     this.props.setRoundMessage({});
 
     // send user information to socket to put him in a room
+    console.log("is socket connceted before?", this.state.socket.connected);
     this.state.socket.on("connect", () => {
+      console.log("is socket connceted after?", this.state.socket.connected);
       this.state.socket.emit("room", this.props.game.id, this.props.user.id);
       console.log("emitted room info", this.props.game.id, this.props.user.id);
       console.log("client socket id on connect", this.state.socket.id);
