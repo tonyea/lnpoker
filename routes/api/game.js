@@ -21,7 +21,7 @@ router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    getTable(req.user.id, returnResult(req, res));
+    getTable(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
   }
 );
 
@@ -120,12 +120,15 @@ router.post(
 // callback function that returns error or emit's success response to socket clients. It uses closure scope to get req and res
 const returnResult = (req, res) => {
   return (errors, resultFromCaller = {}) => {
-    const io = req.app.get("socketio");
     // const ee = req.app.get("eventemitter");
     if (errors) {
       // if error is "timedout" then force currentplayer exit, else return error as is
       if (errors.timedout) {
-        return exitTable(req.user.id, returnResult(req, res));
+        return exitTable(
+          req.user.id,
+          req.app.get("eventEmitter"),
+          returnResult(req, res)
+        );
       } else {
         res.status(400);
         return res.json(errors);

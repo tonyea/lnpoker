@@ -171,7 +171,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
  * @param {function} cb Callback function that accepts error or json response
  * @returns {function} Returns the callback function passed the active game with the players array as an object or error
  */
-const getTable = async (userID, cb) => {
+const getTable = async (userID, emitter, cb) => {
   try {
     const alreadyAtTable = await isPlayerOnAnyTable(userID);
 
@@ -202,7 +202,7 @@ const getTable = async (userID, cb) => {
         .then(res => {
           timedOutPlayerID = res.rows[0].id;
         });
-      return await exitTable(timedOutPlayerID, cb);
+      return await exitTable(timedOutPlayerID, emitter, cb);
     }
 
     return cb(null, table);
