@@ -148,7 +148,7 @@ const checkForAllInPlayer = players => {
 };
 
 /**
- * Get details of active game where specified user is seated
+ * Get details of active game where specified user is seated. Only includes seated players.
  * @param {number} userID Get details of game where userID
  */
 const getGame = async userID => {

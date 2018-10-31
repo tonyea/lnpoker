@@ -141,7 +141,7 @@ const newRound = async tableID => {
  * @param {number} userID
  * @returns {Promise<void>}
  */
-const initNewRound = async userID => {
+const initNewRound = async (userID, emitter) => {
   // get all players at table
   let players = [];
   await db
@@ -189,6 +189,9 @@ const initNewRound = async userID => {
 
   // call new round
   await newRound(tableID);
+
+  // let table know that a new round has begun
+  emitter.newRound(tableID);
 };
 
 /**
@@ -196,28 +199,30 @@ const initNewRound = async userID => {
  * @param {number} userID user who took the action that triggered a round progress event
  * @return {string} returns success message
  */
-const progress = async userID => {
-  const userTable = await getGame(userID);
+const progress = async (userID, emitter) => {
+  const seatedPlayers = await getGame(userID);
 
-  const status = userTable[0].status;
-  const roundname = userTable[0].roundname;
-  const board = userTable[0].board;
-  const tableID = userTable[0].table_id;
+  const status = seatedPlayers[0].status;
+  const roundname = seatedPlayers[0].roundname;
+  const board = seatedPlayers[0].board;
+  const tableID = seatedPlayers[0].table_id;
   // if status of game is started then progress, else null
   if (status === "started") {
     // If only one player left unfolded, then he wins the pot
-    const notFolded = userTable.filter(player => player.lastaction !== "fold");
+    const notFolded = seatedPlayers.filter(
+      player => player.lastaction !== "fold"
+    );
     // only progress game if it is end of round or only one player left
     if ((await checkForEndOfRound(userID)) === true || notFolded.length === 1) {
       // if current player is last player, first player is set as current player, else move current player 1 down the table.
-      const currentPlayerIndex = userTable.findIndex(
+      const currentPlayerIndex = seatedPlayers.findIndex(
         user => user.currentplayer === true
       );
       const newCurrentPlayerIndex =
-        currentPlayerIndex >= userTable.length - 1
-          ? currentPlayerIndex - userTable.length + 1
+        currentPlayerIndex >= seatedPlayers.length - 1
+          ? currentPlayerIndex - seatedPlayers.length + 1
           : currentPlayerIndex + 1;
-      const newCurrentPlayerID = userTable[newCurrentPlayerIndex].player_id;
+      const newCurrentPlayerID = seatedPlayers[newCurrentPlayerIndex].player_id;
 
       await setCurrentPlayer(newCurrentPlayerID, tableID);
 
@@ -236,17 +241,20 @@ const progress = async userID => {
           endRoundMessage.winner.length > 0 ||
           endRoundMessage.bankrupt.length > 0
         ) {
-          return endRoundMessage;
+          emitter.endRound(tableID, endRoundMessage);
+          setTimeout(() => initNewRound(userID, emitter), 3000);
+          return "Success";
         }
       }
       if (roundname === "River") {
         await setRoundName("Showdown", userID);
         //Evaluate each hand
-        for (let j = 0; j < userTable.length; j += 1) {
-          let cards = userTable[j].cards.concat(board);
+        for (let j = 0; j < seatedPlayers.length; j += 1) {
+          let cards = seatedPlayers[j].cards.concat(board);
           let hand = rankHand({ cards });
-          await setRank(userTable[j].player_id, hand);
+          await setRank(seatedPlayers[j].player_id, hand);
         }
+
         // compile check for winner and check for bankrupt into one messages object and if it exists then return it
         let endRoundMessage = {};
         endRoundMessage.winner = await checkForWinner(userID);
@@ -255,7 +263,9 @@ const progress = async userID => {
           endRoundMessage.winner.length > 0 ||
           endRoundMessage.bankrupt.length > 0
         ) {
-          return endRoundMessage;
+          emitter.endRound(tableID, endRoundMessage);
+          setTimeout(() => initNewRound(userID, emitter), 3000);
+          return "Success";
         }
       } else if (roundname === "Turn") {
         await setRoundName("River", userID);
@@ -271,6 +281,9 @@ const progress = async userID => {
         await removeTalked(userID);
       }
     }
+
+    // let table know that a user has completed an action
+    emitter.gameAction(tableID);
     // return success message
     return "Success";
   }

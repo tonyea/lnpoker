@@ -8,23 +8,23 @@ class GameEvents extends EventEmitter {
   }
 
   joinedGame(userID, tableID) {
-    this.emit("joinedGame", { userID, tableID });
+    this.emit("joined game", { userID, tableID });
   }
 
   leftGame(userID, tableID) {
-    this.emit("leftGame", { userID, tableID });
+    this.emit("left game", { userID, tableID });
   }
 
   gameAction(tableID) {
-    this.emit("gameAction", { tableID });
+    this.emit("game action", { tableID });
   }
 
-  winner(userID, tableID) {
-    this.emit("winner", { userID, tableID });
+  newRound(tableID) {
+    this.emit("new round", { tableID });
   }
 
-  bankrupt(userID, tableID) {
-    this.emit("bankrupt", { userID, tableID });
+  endRound(tableID, msg) {
+    this.emit("end round", { tableID, msg });
   }
 
   gameover(userID, tableID) {
@@ -40,7 +40,7 @@ const events = app => {
    * @param {object} arg Object that contains userID of user that joinde and tableID of table that was joined
    * @listens joinedGame A user join event
    */
-  gameEvents.on("joinedGame", arg => {
+  gameEvents.on("joined game", arg => {
     console.log(`${arg.userID} has joined table # ${arg.tableID}`);
     // send socket emit to all users at table, except the user that joined, that a user has joined a table
     gameEvents.socket
@@ -54,7 +54,7 @@ const events = app => {
    * @param {number} tableID tableID of table where action occured
    * @listens gameAction A user game action event
    */
-  gameEvents.on("gameAction", tableID => {
+  gameEvents.on("game action", tableID => {
     console.log(`user action triggered`);
     // send socket emit to all users at table that a user has taken an action
     gameEvents.socket
@@ -63,8 +63,22 @@ const events = app => {
       .emit("table updated");
   });
 
-  gameEvents.on("winner", arg => {
-    console.log(`winner triggered`);
+  /**
+   * Lets all users at a table know that a new round has begun. Not triggered for first round.
+   * @param {number} tableID
+   * @listens newRound A new round event
+   */
+  gameEvents.on("new round", tableID => {
+    console.log(`new round triggered`);
+    // send socket emit to all users at table that a user has taken an action
+    gameEvents.socket
+      .of("/game")
+      .in(tableID)
+      .emit("table updated");
+  });
+
+  gameEvents.on("end round", arg => {
+    console.log(`end round triggered`);
     // send socket emit to all users at table that a user has taken an action
     gameEvents.socket
       .of("/game")

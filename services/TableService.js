@@ -268,7 +268,7 @@ const exitTable = async (userID, emitter, cb) => {
         [remainingSeatedPlayers[0].player_id]
       );
       // init new round
-      await initNewRound(remainingSeatedPlayers[0].player_id);
+      await initNewRound(remainingSeatedPlayers[0].player_id, emitter);
     }
 
     return cb(null, "Success");
@@ -307,10 +307,8 @@ const check = async (userID, emitter, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
-      // let table know that a user has taken an action
-      emitter.gameAction(tableID);
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID));
+      return cb(null, await progress(userID, emitter));
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -342,10 +340,8 @@ const fold = async (userID, emitter, cb) => {
       [userID]
     );
     if (res.rows.length > 0) {
-      // let table know that a user has taken an action
-      emitter.gameAction(res.rows[0].table_id);
       // if progress returns an object then return it to the callback
-      return cb(null, await progress(userID));
+      return cb(null, await progress(userID, emitter));
     }
     errors.notupdated = "Did not update action and talked state";
     throw errors;
@@ -376,7 +372,7 @@ const bet = async (userID, betAmount, emitter, cb) => {
     const totalChips = res.rows[0].chips;
 
     if (totalChips <= betAmount) {
-      return await allin(userID, cb);
+      return await allin(userID, emitter, cb);
     }
 
     // add chips to my bet, remove from chips, set talked = true
@@ -388,10 +384,8 @@ const bet = async (userID, betAmount, emitter, cb) => {
       )
       .then(res => (tableID = res.rows[0].table_id));
 
-    // let table know that a user has taken an action
-    emitter.gameAction(tableID);
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID));
+    return cb(null, await progress(userID, emitter));
   } catch (e) {
     return cb(e, null);
   }
@@ -431,9 +425,7 @@ const allin = async (userID, emitter, cb) => {
       .then(res => (tableID = res.rows[0].table_id));
 
     //Attempt to progress the game
-    await progress(userID);
-    // let table know that a user has taken an action
-    emitter.gameAction(tableID);
+    await progress(userID, emitter);
     return cb(null, "All In");
   } catch (e) {
     return cb(e, null);
@@ -460,7 +452,7 @@ const call = async (userID, emitter, cb) => {
     const totalChips = res1.rows[0].chips;
 
     if (totalChips < maxBet) {
-      return await allin(userID, cb);
+      return await allin(userID, emitter, cb);
     }
 
     // Match the highest bet
@@ -473,10 +465,8 @@ const call = async (userID, emitter, cb) => {
       )
       .then(res => (tableID = res.rows[0].table_id));
 
-    // let table know that a user has taken an action
-    emitter.gameAction(tableID);
     // if progress returns an object then return it to the callback
-    return cb(null, await progress(userID));
+    return cb(null, await progress(userID, emitter));
     //Attemp to progress the game
   } catch (e) {
     // errors.notallowed = "Bet not allowed, replay please";
