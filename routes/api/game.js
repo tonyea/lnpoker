@@ -10,9 +10,20 @@ const {
   bet,
   call,
   exitTable,
-  initNewRound,
+  getTableId,
   all
 } = require("../../services/TableService");
+
+// @route   GET api/game/id
+// @desc    Get table id that user is active on
+// @access  Private
+router.get(
+  "/id",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    getTableId(req.user.id, returnResult(req, res));
+  }
+);
 
 // @route   GET api/game
 // @desc    Get game information that user is active on
@@ -21,7 +32,7 @@ router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    getTable(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
+    getTable(req.user.id, req.app.get("socketio"), returnResult(req, res));
   }
 );
 
@@ -43,7 +54,7 @@ router.post(
     createNewTable(
       req.user.id,
       req.params.buyin,
-      req.app.get("eventEmitter"),
+      req.app.get("socketio"),
       returnResult(req, res)
     );
   }
@@ -59,7 +70,7 @@ router.post(
     joinTable(
       req.params.tableID,
       req.user.id,
-      req.app.get("eventEmitter"),
+      req.app.get("socketio"),
       returnResult(req, res)
     );
   }
@@ -72,7 +83,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // check if it is player's turn
-    check(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
+    check(req.user.id, req.app.get("socketio"), returnResult(req, res));
   }
 );
 
@@ -84,7 +95,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // fold if it is player's turn
-    fold(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
+    fold(req.user.id, req.app.get("socketio"), returnResult(req, res));
   }
 );
 
@@ -99,7 +110,7 @@ router.post(
     bet(
       req.user.id,
       req.params.amount,
-      req.app.get("eventEmitter"),
+      req.app.get("socketio"),
       returnResult(req, res)
     );
   }
@@ -113,7 +124,7 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     // call if it is player's turn
-    call(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
+    call(req.user.id, req.app.get("socketio"), returnResult(req, res));
   }
 );
 
@@ -126,7 +137,7 @@ const returnResult = (req, res) => {
       if (errors.timedout) {
         return exitTable(
           req.user.id,
-          req.app.get("eventEmitter"),
+          req.app.get("socketio"),
           returnResult(req, res)
         );
       } else {
@@ -187,7 +198,7 @@ router.post(
   "/exit",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    exitTable(req.user.id, req.app.get("eventEmitter"), returnResult(req, res));
+    exitTable(req.user.id, req.app.get("socketio"), returnResult(req, res));
     console.log("exited");
   }
 );

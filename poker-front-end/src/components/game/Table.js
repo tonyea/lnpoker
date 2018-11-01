@@ -10,6 +10,7 @@ import {
 import { Prompt } from "react-router-dom";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
+import axios from "axios";
 
 // socket
 import io from "socket.io-client";
@@ -19,26 +20,28 @@ class Table extends Component {
     super(props);
 
     this.state = {
-      socket: io("http://localhost:8010/game"),
-      roundmessage: {}
+      socket: io.connect("http://localhost:8010/game")
     };
   }
 
   async componentDidMount() {
-    // Set state of game when table is mounted
     console.log("mounted");
+
+    // connect socket before fetching data
+    await this.state.socket.on("connect", async () => {
+      // get table ID to pass to socket to put user in room
+      await axios.get("/api/game/id").then(res => {
+        // send user information to socket to put him in a room
+        this.state.socket.emit("room", res.data, this.props.user.id);
+        console.log("emitted room info", res.data, this.props.user.id);
+      });
+      console.log("client socket id on connect", this.state.socket.id);
+    });
+
+    // Set state of game when table is mounted
     await this.props.fetchGameData();
     // default to empty roundmessage
     this.props.setRoundMessage({});
-
-    // send user information to socket to put him in a room
-    console.log("is socket connceted before?", this.state.socket.connected);
-    this.state.socket.on("connect", () => {
-      console.log("is socket connceted after?", this.state.socket.connected);
-      this.state.socket.emit("room", this.props.game.id, this.props.user.id);
-      console.log("emitted room info", this.props.game.id, this.props.user.id);
-      console.log("client socket id on connect", this.state.socket.id);
-    });
 
     // set round message on winner, bankrupt etc.
     this.state.socket.on("round message", msg => {
@@ -58,7 +61,7 @@ class Table extends Component {
     // remove player from state when leaving table
     this.props.exitGame();
     console.log("client socket id on disconnect", this.state.socket.id);
-    this.state.socket.disconnect(this.props.game.id);
+    this.state.socket.disconnect();
   }
   render() {
     console.log("rendered");

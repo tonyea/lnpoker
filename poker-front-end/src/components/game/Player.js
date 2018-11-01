@@ -178,7 +178,7 @@ const mapStateToProps = state => ({
         (prev, current) => (prev.bet > current.bet ? prev.bet : current.bet)
       )
     : 0,
-  disabledstate: state.game.roundname === "Showdown" // || state.game.roundmessage.winner || state.game.roundmessage.bankrupt
+  disabledstate: state.game.roundname === "Showdown" || state.game.roundmessage
 });
 
 export default connect(

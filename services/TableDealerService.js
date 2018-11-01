@@ -191,7 +191,10 @@ const initNewRound = async (userID, emitter) => {
   await newRound(tableID);
 
   // let table know that a new round has begun
-  emitter.newRound(tableID);
+  emitter
+    .of("/game")
+    .in(tableID)
+    .emit("table updated");
 };
 
 /**
@@ -241,7 +244,10 @@ const progress = async (userID, emitter) => {
           endRoundMessage.winner.length > 0 ||
           endRoundMessage.bankrupt.length > 0
         ) {
-          emitter.endRound(tableID, endRoundMessage);
+          emitter
+            .of("/game")
+            .in(tableID)
+            .emit("round message", endRoundMessage);
           setTimeout(() => initNewRound(userID, emitter), 3000);
           return "Success";
         }
@@ -263,7 +269,10 @@ const progress = async (userID, emitter) => {
           endRoundMessage.winner.length > 0 ||
           endRoundMessage.bankrupt.length > 0
         ) {
-          emitter.endRound(tableID, endRoundMessage);
+          emitter
+            .of("/game")
+            .in(tableID)
+            .emit("round message", endRoundMessage);
           setTimeout(() => initNewRound(userID, emitter), 3000);
           return "Success";
         }
@@ -283,7 +292,10 @@ const progress = async (userID, emitter) => {
     }
 
     // let table know that a user has completed an action
-    emitter.gameAction(tableID);
+    emitter
+      .of("/game")
+      .in(tableID)
+      .emit("table updated");
     // return success message
     return "Success";
   }

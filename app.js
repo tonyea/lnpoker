@@ -19,11 +19,6 @@ if (process.env.NODE_ENV !== "test") {
   );
 }
 
-// set event handler
-const gameEvents = require("./events/GameEvents")(app);
-
-app.set("eventEmitter", gameEvents);
-
 // // testing grpc
 // const lnrpc = require("./ln-grpc");
 // lnrpc.getInfo({}, (err, res) => {

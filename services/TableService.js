@@ -127,7 +127,12 @@ const joinTable = async (tableID, userID, emitter, cb) => {
     // check if we have minimum number of players
     if (numplayers < minplayers) {
       table.players = await getPlayersAtTable(table.id, userID);
-      emitter.joinedGame(userID, tableID);
+
+      // send socket emit to all users at table, except the user that joined, that a user has joined a table
+      emitter
+        .of("/game")
+        .to(tableID)
+        .emit("table updated");
       return cb(null, table);
     }
 
@@ -158,8 +163,27 @@ const joinTable = async (tableID, userID, emitter, cb) => {
       table.status = "started";
     }
     table.players = await getPlayersAtTable(tableID, userID);
-    emitter.joinedGame(userID, tableID);
+    // send socket emit to all users at table, except the user that joined, that a user has joined a table
+    emitter
+      .of("/game")
+      .to(tableID)
+      .emit("table updated");
     return cb(null, table);
+  } catch (e) {
+    return cb(e, null);
+  }
+};
+
+/**
+ * Get id of the table that the user has joined
+ * @param {number} userID ID of user seeking info
+ * @param {function} cb Callback function that accepts error or json response
+ * @returns {function} Returns the callback function passed the active game with the players array as an object or error
+ */
+const getTableId = async (userID, cb) => {
+  try {
+    const tableID = await isPlayerOnAnyTable(userID);
+    return cb(null, tableID);
   } catch (e) {
     return cb(e, null);
   }
@@ -475,6 +499,7 @@ const call = async (userID, emitter, cb) => {
 };
 
 module.exports = {
+  getTableId,
   getTable,
   createNewTable,
   all,

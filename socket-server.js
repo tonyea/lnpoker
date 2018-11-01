@@ -11,21 +11,28 @@ const init = app => {
   let userNum = 0;
   let activePlayers = [];
 
-  io.of("/game").on("connection", client => {
+  io.of("/game").on("connection", clientSocket => {
     userNum++;
     // console.log("a user connected", userNum);
     // console.log("users and rooms", activePlayers);
 
-    client.on("room", (tableid, userid) => {
-      console.log("Got connected!", userNum);
+    clientSocket.on("test", () => {
+      console.log("test");
+      console.log("Test listener - Rooms listed: ", clientSocket.adapter.rooms);
+    });
+
+    clientSocket.on("room", (tableid, userid) => {
+      console.log(userid, " got connected!", userNum);
       // if user is already in array of active players then update his socket id
       const playerIndex = activePlayers.findIndex(
         activePlayer => activePlayer.userid === userid
       );
-      // have client join the room with his tableID
-      client.join(tableid);
+      // have clientSocket join the room with his tableID
+      clientSocket.join(tableid);
+      console.log("Rooms listed: ", clientSocket.adapter.rooms);
+
       if (playerIndex !== -1) {
-        activePlayers[playerIndex].socketid = client.id;
+        activePlayers[playerIndex].socketid = clientSocket.id;
         // console.log("player already connected", activePlayers[playerIndex]);
       }
       // else if user is not in array of active players then add him
@@ -33,19 +40,21 @@ const init = app => {
         activePlayers.push({
           userid,
           tableid,
-          socketid: client.id
+          socketid: clientSocket.id
         });
       }
 
       console.log("activePlayers when a user connects", activePlayers);
     });
 
-    client.on("disconnect", tableid => {
+    clientSocket.on("disconnect", () => {
       userNum--;
       console.log("Got disconnected!", userNum);
 
       // find player's socket id that matches the disconnected socket id
-      let i = activePlayers.findIndex(player => player.socketid === client.id);
+      let i = activePlayers.findIndex(
+        player => player.socketid === clientSocket.id
+      );
 
       // if found, trigger exit table and leave room
       // validate that the table is the same for that socketid
