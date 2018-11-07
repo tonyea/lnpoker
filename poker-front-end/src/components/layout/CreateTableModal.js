@@ -28,6 +28,7 @@ class CreateTableModal extends Component {
     // if yes then submit to /api/game/create/buyin
     await axios.post("/api/game/create/" + this.state.buyin).then(res => {
       if (res.status === 200) {
+        console.log("redirecting to /play");
         return this.props.history.push("/play");
       }
     });

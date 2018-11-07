@@ -40,7 +40,7 @@ class Player extends PureComponent {
   };
 
   render() {
-    console.log("this.props.myInfo", this.props.myInfo);
+    // console.log("this.props.myInfo", this.props.myInfo);
     const {
       cards,
       chips,

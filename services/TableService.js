@@ -164,6 +164,9 @@ const joinTable = async (tableID, userID, emitter, cb) => {
     }
     table.players = await getPlayersAtTable(tableID, userID);
     // send socket emit to all users at table, except the user that joined, that a user has joined a table
+    console.log(
+      `10: ${userID} joined table, emitting update to all users at table`
+    );
     emitter
       .of("/game")
       .to(tableID)
@@ -204,32 +207,33 @@ const getTable = async (userID, emitter, cb) => {
     }
 
     table = await findTableByID(alreadyAtTable);
-    table.players = await getPlayersAtTable(alreadyAtTable, userID);
+    table.players;
+    getPlayersAtTable(alreadyAtTable, userID).then(async res => {
+      table.players = res;
+      // check if any user at table is timed out
+      let isTimedOut = false;
+      let timedOutPlayer = table.players.find(player => {
+        const timestamp = player.action_timestamp;
+        timestamp !== null
+          ? (isTimedOut =
+              new Date(timestamp).getTime() + table.timeout <= Date.now())
+          : null;
+        return isTimedOut;
+      });
 
-    // check if any user at table is timed out
-    let isTimedOut = false;
-    let timedOutPlayer = table.players.find(player => {
-      const timestamp = player.action_timestamp;
-      timestamp !== null
-        ? (isTimedOut =
-            new Date(timestamp).getTime() + table.timeout <= Date.now())
-        : null;
-      return isTimedOut;
+      if (isTimedOut) {
+        let timedOutPlayerID;
+        await db
+          .query("SELECT id FROM users WHERE username=$1", [
+            timedOutPlayer.username
+          ])
+          .then(res => {
+            timedOutPlayerID = res.rows[0].id;
+          });
+        return await exitTable(timedOutPlayerID, emitter, cb);
+      }
+      return cb(null, table);
     });
-
-    if (isTimedOut) {
-      let timedOutPlayerID;
-      await db
-        .query("SELECT id FROM users WHERE username=$1", [
-          timedOutPlayer.username
-        ])
-        .then(res => {
-          timedOutPlayerID = res.rows[0].id;
-        });
-      return await exitTable(timedOutPlayerID, emitter, cb);
-    }
-
-    return cb(null, table);
   } catch (e) {
     return cb(e, null);
   }

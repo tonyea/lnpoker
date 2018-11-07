@@ -1,35 +1,37 @@
+// include env variables
+require("dotenv").config();
+
 /**
  * Initialize Socket.io
  *
  */
 const init = app => {
-  const http = require("http").Server(app);
-  const io = require("socket.io")(http);
+  const httpServer = require("http").Server(app);
+  const io = require("socket.io")(httpServer);
 
+  const sock_port = process.env.SOCKET_PORT || 8010; // Set socket port
+  if (process.env.NODE_ENV !== "test") {
+    httpServer.listen(sock_port, () =>
+      console.log(`Socket listening on port ${sock_port}!`)
+    );
+  }
+
+  // socket is made available to other parts of the app
   app.set("socketio", io);
 
-  let userNum = 0;
   let activePlayers = [];
 
   io.of("/game").on("connection", clientSocket => {
-    userNum++;
-    // console.log("a user connected", userNum);
     // console.log("users and rooms", activePlayers);
 
-    clientSocket.on("test", () => {
-      console.log("test");
-      console.log("Test listener - Rooms listed: ", clientSocket.adapter.rooms);
-    });
-
     clientSocket.on("room", (tableid, userid) => {
-      console.log(userid, " got connected!", userNum);
       // if user is already in array of active players then update his socket id
       const playerIndex = activePlayers.findIndex(
         activePlayer => activePlayer.userid === userid
       );
       // have clientSocket join the room with his tableID
       clientSocket.join(tableid);
-      console.log("Rooms listed: ", clientSocket.adapter.rooms);
+      console.log("20: Rooms listed: ", clientSocket.adapter.rooms);
 
       if (playerIndex !== -1) {
         activePlayers[playerIndex].socketid = clientSocket.id;
@@ -42,32 +44,48 @@ const init = app => {
           tableid,
           socketid: clientSocket.id
         });
+        console.log(
+          `30: Player ${userid} got connected! ${
+            activePlayers.length
+          } players on table`
+        );
       }
 
       console.log("activePlayers when a user connects", activePlayers);
     });
 
     clientSocket.on("disconnect", () => {
-      userNum--;
-      console.log("Got disconnected!", userNum);
-
       // find player's socket id that matches the disconnected socket id
-      let i = activePlayers.findIndex(
-        player => player.socketid === clientSocket.id
-      );
-
+      let i = activePlayers.findIndex(player => {
+        // console.log(
+        //   `player.socketid, ${player.socketid} vs clientSocket.id, ${
+        //     clientSocket.id
+        //   }. TEST ${player.socketid === clientSocket.id}`
+        // );
+        return player.socketid === clientSocket.id;
+      });
       // if found, trigger exit table and leave room
       // validate that the table is the same for that socketid
       if (i >= 0 && activePlayers[i].tableid !== null) {
+        console.log(
+          `Player ${
+            activePlayers[i].userid
+          } got disconnected! ${activePlayers.length - 1} players remain`
+        );
+        clientSocket.leave(activePlayers[i].tableid);
         // remove player from active array
         activePlayers.splice(i, 1);
-
-        console.log("activePlayers when a user disconnects", activePlayers);
       }
+      console.log("activePlayers when a user disconnects", activePlayers);
+    });
+
+    clientSocket.on("subscribeToTimer", interval => {
+      console.log("client is subscribing to timer with interval, ", interval);
+      setInterval(() => {
+        clientSocket.emit("timer", new Date());
+      }, interval);
     });
   });
-
-  return http;
 };
 
 module.exports = init;

@@ -32,7 +32,8 @@ router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    getTable(req.user.id, req.app.get("socketio"), returnResult(req, res));
+    const socket = req.app.get("socketio");
+    getTable(req.user.id, socket, returnResult(req, res));
   }
 );
 
@@ -51,10 +52,11 @@ router.post(
   "/create/:buyin",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
+    const socket = req.app.get("socketio");
     createNewTable(
       req.user.id,
       req.params.buyin,
-      req.app.get("socketio"),
+      socket,
       returnResult(req, res)
     );
   }
@@ -145,48 +147,6 @@ const returnResult = (req, res) => {
         return res.json(errors);
       }
     }
-    // emit a status update to all players at the table that the table has changed. it will also return the response as is
-    // if (resultFromCaller === "Success") {
-    //   io.of("/game")
-    //     .in(tableID)
-    //     .emit("table updated");
-    // }
-
-    // if round message received emit to table
-    // if (resultFromCaller.winner || resultFromCaller.bankrupt) {
-    //   io.of("/game")
-    //     .in(tableID)
-    //     .emit("round message", resultFromCaller);
-    // }
-    // trigger init new round if winner
-
-    // if (resultFromCaller.winner) {
-    //   console.log(resultFromCaller.winner);
-    //   setTimeout(() => {
-    //     initNewRound(req.user.id).then(res => {
-    //       io.of("/game")
-    //         .in(tableID)
-    //         .emit("table updated");
-    //     });
-    //   }, 3000);
-    // }
-
-    // send message before kicking out last player
-    // if (resultFromCaller.gameover) {
-    //   setTimeout(() => {
-    //     io.of("/game")
-    //       .in(tableID)
-    //       .emit("gameover");
-    //   }, 3000);
-    // }
-    // emit an event to Alice socket when Bob joins the game
-
-    // const path = req.url.substring(1, 5);
-    // if (resultFromCaller.status === "started" && path === "join") {
-    //   io.of("/game")
-    //     .to(tableID)
-    //     .emit("table updated");
-    // }
     return res.json(resultFromCaller);
   };
 };
