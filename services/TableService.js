@@ -278,6 +278,18 @@ const exitTable = async (userID, emitter, cb) => {
 
     // if number of players remaining, seated or unseated, is 1 then kick him out and then send message to user that he has been kicked out
     if (remainingPlayers.length === 1) {
+      // first send message about gameover state
+      emitter
+        .of("/game")
+        .in(tableID)
+        .emit("round message", { gameover: true });
+      // trigger exit game after 3 secs
+      setTimeout(() => {
+        emitter
+          .of("/game")
+          .in(tableID)
+          .emit("gameover");
+      }, 3000);
       return cb(null, {
         gameover: await kickLastPlayer(dbres.rows[0].player_id)
       });

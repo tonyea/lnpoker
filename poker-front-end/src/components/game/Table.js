@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import Board from "./Board";
 import Opponents from "./Opponents";
 import Player from "./Player";
+import { withRouter } from "react-router-dom";
 import {
   fetchGameData,
   setRoundMessage,
@@ -20,9 +21,11 @@ class Table extends Component {
     super(props);
 
     this.state = {
-      socket: null
+      socket: null,
+      gameover: false
     };
   }
+
   async componentDidMount() {
     this.setState({ socket: io("http://localhost:8010/game") });
     console.log("mounted");
@@ -45,6 +48,13 @@ class Table extends Component {
       this.props.setRoundMessage(msg);
     });
 
+    this.state.socket.on("gameover", () => {
+      this.setState({ gameover: true });
+      this.props.setRoundMessage();
+      this.props.history.push("/");
+      this.state.socket.disconnect();
+    });
+
     this.state.socket.on("table updated", () => {
       console.log("table updated");
       this.props.fetchGameData();
@@ -54,15 +64,19 @@ class Table extends Component {
   componentWillUnmount() {
     console.log("table unmounting");
     // remove player from state when leaving table
-    this.props.exitGame();
-    this.state.socket.disconnect();
+    if (!this.state.gameover) {
+      this.props.exitGame();
+      this.state.socket.disconnect();
+    }
   }
+
   render() {
     console.log("rendered");
 
     return (
       <div className="container table-container">
         <Prompt
+          when={!this.state.gameover}
           message={location =>
             `Leaving a game might lead to loss of blinds and bets placed. Are you sure?`
           }
@@ -98,4 +112,4 @@ const mapDispatchToProps = dispatch => ({
 export default connect(
   mapStateToProps,
   mapDispatchToProps
-)(Table);
+)(withRouter(Table));

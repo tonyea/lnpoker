@@ -65,6 +65,14 @@ const Board = props => {
       )
     );
   }
+  if (roundMessage && roundMessage.gameover) {
+    messageRows.push(
+      renderMessage(
+        "Everyone has left the table. Redirecting to Home.",
+        messageRows.length
+      )
+    );
+  }
 
   return (
     <div className="row deck-row">
