@@ -60,7 +60,7 @@ class ActiveGames extends Component {
           <td>{gameInfo.numplayers + "/" + gameInfo.maxplayers}</td>
           <td>{gameInfo.status}</td>
           <td>{gameInfo.minbuyin} Sats</td>
-          <td>
+          <td className="allgames join-button-field">
             <button
               type="button"
               className="btn btn-secondary"
@@ -81,7 +81,9 @@ class ActiveGames extends Component {
         gameRows.push(renderGameRow(element, key));
       }
     } else {
-      return <div className="allgames">{this.state.loadingtext}</div>;
+      return (
+        <div className="allgames loading-text">{this.state.loadingtext}</div>
+      );
     }
 
     return (

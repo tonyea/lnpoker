@@ -22,7 +22,9 @@ const Opponents = props => {
       playerRows.push(renderOpponent(element, key));
     }
   } else {
-    return <div>No Players have joined</div>;
+    return (
+      <div className="row awaiting-opponents">Waiting for players to join</div>
+    );
   }
 
   return (

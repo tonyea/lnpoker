@@ -67,7 +67,9 @@ class Player extends PureComponent {
         cardRows.push(renderCard(element, key));
       }
     } else {
-      return <div>Waiting for new round</div>;
+      return (
+        <div className="row awaiting-opponents">Waiting for new round</div>
+      );
     }
 
     let actionState = <div>Waiting</div>;

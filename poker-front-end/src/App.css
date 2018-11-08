@@ -5,6 +5,7 @@ body {
 .main-window {
   background-color: #343a40;
   padding-bottom: 10%;
+  min-height: 1000px;
 }
 
 .card img {
@@ -213,4 +214,22 @@ body {
   100% {
     transform: translate(0px, 0px);
   }
+}
+
+.allgames > tbody > tr > td,
+.allgames > tbody > tr > th {
+  vertical-align: baseline;
+}
+
+.loading-text {
+  color: #fff;
+}
+.awaiting-opponents {
+  font-size: 1.5rem;
+  justify-content: center;
+  color: darkgray;
+}
+
+.table-container {
+  padding-top: 100px;
 }
