@@ -7,7 +7,7 @@ const Board = props => {
     return <Card card={cardType} key={key} className="col-sm" />;
   };
 
-  const { id, smallblind, bigblind, pot, board, roundMessage } = props;
+  const { pot, bets, board, roundMessage } = props;
   // console.log("roundMessage", roundMessage);
   const cardRows = [];
   for (const key in board) {
@@ -77,10 +77,11 @@ const Board = props => {
   return (
     <div className="row deck-row">
       <div className="deck-row-title p-2">
-        Game # {id}
-        <div>Pot: {pot} Sats</div>
-        <div>Small Blind: {smallblind} Sats</div>
-        <div>Big Blind: {bigblind} Sats</div>
+        <div>
+          <h4>Pot</h4>
+          <div>Total: {pot} Sats</div>
+          <div>Bets: {bets} Sats</div>
+        </div>
       </div>
       {messageRows.length === 0 ? (
         <div className="deck-row-cards row">{cardRows}</div>
@@ -92,10 +93,13 @@ const Board = props => {
 };
 
 const mapStateToProps = state => ({
-  id: state.game.id,
-  smallblind: state.game.smallblind,
-  bigblind: state.game.bigblind,
   pot: state.game.pot,
+  bets: state.game.players
+    ? state.game.players.reduce((total, player) => {
+        total += player.bet;
+        return total;
+      }, 0)
+    : 0,
   board: state.game.board,
   roundMessage: state.game.roundMessage
 });
