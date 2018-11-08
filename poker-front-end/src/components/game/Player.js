@@ -121,7 +121,7 @@ class Player extends PureComponent {
             type="button"
             className="btn btn-outline-primary"
             onClick={this.callGame}
-            disabled={!currentplayer || disabledstate}
+            disabled={!currentplayer || disabledstate || isMaxBet}
           >
             Call
           </button>
@@ -174,8 +174,8 @@ const mapStateToProps = state => ({
       )
     : [],
   maxbet: state.game.players
-    ? state.game.players.reduce(
-        (prev, current) => (prev.bet > current.bet ? prev.bet : current.bet)
+    ? state.game.players.reduce((prev, current) =>
+        prev.bet > current.bet ? prev.bet : current.bet
       )
     : 0,
   disabledstate:
