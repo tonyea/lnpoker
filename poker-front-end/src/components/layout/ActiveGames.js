@@ -9,7 +9,8 @@ class ActiveGames extends Component {
     super(props);
 
     this.state = {
-      activegames: []
+      activegames: [],
+      loadingtext: "Loading active games..."
     };
 
     this.joinGame = this.joinGame.bind(this);
@@ -21,10 +22,14 @@ class ActiveGames extends Component {
       if (res.status === 200) {
         this.setState({ activegames: res.data });
       }
+      if (this.state.activegames.length === 0) {
+        this.setState({ loadingtext: "No active games, please create one." });
+      }
     });
   };
 
   componentDidMount() {
+    this.setState();
     this.interval = setInterval(this.getActiveGames, 5000);
   }
 
@@ -76,9 +81,7 @@ class ActiveGames extends Component {
         gameRows.push(renderGameRow(element, key));
       }
     } else {
-      return (
-        <div className="allgames">No active games, please create one.</div>
-      );
+      return <div className="allgames">{this.state.loadingtext}</div>;
     }
 
     return (
