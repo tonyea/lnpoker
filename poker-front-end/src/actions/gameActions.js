@@ -41,7 +41,7 @@ export const exitGame = () => async dispatch => {
   }
 };
 
-const receiveGameData = gameFromServer => ({
+export const receiveGameData = gameFromServer => ({
   type: RECEIVE_GAME_DATA,
   game: gameFromServer
 });

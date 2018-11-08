@@ -9,7 +9,7 @@ const gameReducer = (state = initialState, action) => {
     // add game to state
     case RECEIVE_GAME_DATA:
       // default to empty round message
-      return { ...state, ...action.game, roundMessage: {} };
+      return { ...action.game, roundMessage: {} };
     case SET_ROUND_MESSAGE:
       return { ...state, roundMessage: { ...action.roundMessage } };
     default:

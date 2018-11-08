@@ -6,6 +6,7 @@ import { withRouter } from "react-router-dom";
 import {
   fetchGameData,
   setRoundMessage,
+  receiveGameData,
   exitGame
 } from "../../actions/gameActions";
 import { Prompt } from "react-router-dom";
@@ -50,7 +51,8 @@ class Table extends Component {
 
     this.state.socket.on("gameover", () => {
       this.setState({ gameover: true });
-      this.props.setRoundMessage();
+      // this.props.setRoundMessage({});
+      this.props.clearGameState({});
       this.props.history.push("/");
       this.state.socket.disconnect();
     });
@@ -106,7 +108,8 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => ({
   setRoundMessage: msg => dispatch(setRoundMessage(msg)),
   fetchGameData: () => dispatch(fetchGameData()),
-  exitGame: () => dispatch(exitGame())
+  exitGame: () => dispatch(exitGame()),
+  clearGameState: () => dispatch(receiveGameData({}))
 });
 
 export default connect(
