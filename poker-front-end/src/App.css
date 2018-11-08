@@ -233,3 +233,13 @@ body {
 .table-container {
   padding-top: 100px;
 }
+
+.login h1,
+.login p {
+  color: white;
+}
+
+.register h1,
+.register p {
+  color: white;
+}
