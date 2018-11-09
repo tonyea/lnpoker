@@ -105,28 +105,40 @@ const checkForWinner = async userID => {
  * @return {Array} Array containing list of bankrupt users. Returns empty array if none.
  */
 const checkForBankrupt = async userID => {
-  // if a player on the table has 0 chips
-  // remove player from table
-  let losers = [];
-  await db
-    .query(
+  try {
+    // if a player on the table has 0 chips
+    // remove player from table
+    let losers = [];
+    const loserRes = await db.query(
       `
         DELETE FROM user_table
         WHERE table_id = (SELECT table_id FROM user_table WHERE player_id = $1)
         AND chips = 0
-        RETURNING *
+        RETURNING player_id
         `,
       [userID]
-    )
-    .then(res => {
-      if (res.rows.length > 0) {
-        // for each player that has gone bankrupt, send a message that he has left the table
-        res.rows.forEach(
-          player => losers.push(player.player_id) // + " has gone bankrupt and left the table!"
-        );
-      }
-    });
-  return losers;
+    );
+    const loserIDs = [];
+    if (loserRes.rows.length > 0) {
+      loserRes.rows.forEach(player => loserIDs.push(player.player_id));
+      const loserIDsString = loserIDs.join();
+      // get usernames of all users by passing through list of userids
+      await db
+        .query("SELECT username FROM users WHERE id in($1)", [loserIDs.join()])
+        .then(res => {
+          // for each player that has gone bankrupt, send a message that he has left the table
+          res.rows.forEach(
+            player =>
+              losers.push({
+                playerName: player.username
+              }) // + " has gone bankrupt and left the table!"
+          );
+        });
+    }
+    return losers;
+  } catch (error) {
+    return [];
+  }
 };
 
 // return players that are all in
