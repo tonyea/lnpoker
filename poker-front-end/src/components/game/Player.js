@@ -2,7 +2,6 @@ import React, { PureComponent } from "react";
 import Card from "./Card";
 import axios from "axios";
 import { connect } from "react-redux";
-import { debug } from "util";
 import Countdown from "./Countdown";
 
 class Player extends PureComponent {
@@ -190,7 +189,7 @@ const mapStateToProps = state => ({
     state.game.roundname === "Showdown" || state.game.roundMessage
       ? Object.keys(state.game.roundMessage).length > 0
       : false,
-  timeout: state.game.timeout || 3000
+  timeout: state.game.timeout || 60000
 });
 
 export default connect(

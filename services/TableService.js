@@ -311,6 +311,11 @@ const exitTable = async (userID, emitter, cb) => {
       await initNewRound(remainingSeatedPlayers[0].player_id, emitter);
     }
 
+    // if round is continuing, message everybody at table that db has been updated so they can see updated list of players
+    emitter
+      .of("/game")
+      .in(tableID)
+      .emit("table updated");
     return cb(null, "Success");
   } catch (e) {
     return cb(e, null);

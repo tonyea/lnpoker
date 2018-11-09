@@ -1,5 +1,7 @@
 import React, { Component } from "react";
 import PropTypes from "prop-types";
+import { fetchGameData } from "../../actions/gameActions";
+import { connect } from "react-redux";
 
 class Countdown extends Component {
   constructor(props) {
@@ -32,16 +34,17 @@ class Countdown extends Component {
     const diff = t2 - t0;
 
     const Seconds_from_T0_to_T2 = diff / 1000;
-    const Seconds_Between_Dates = Math.abs(Seconds_from_T0_to_T2);
+    // const Seconds_Between_Dates = Math.abs(Seconds_from_T0_to_T2);
 
     // clear countdown when date is reached
-    if (Seconds_Between_Dates <= 0) return false;
+    if (Seconds_from_T0_to_T2 <= 0) return false;
 
-    return Seconds_Between_Dates.toFixed(0);
+    return Seconds_from_T0_to_T2.toFixed(0);
   }
 
   stop() {
     clearInterval(this.interval);
+    this.props.fetchGameData();
   }
 
   addLeadingZeros(value) {
@@ -68,7 +71,14 @@ Countdown.propTypes = {
 
 Countdown.defaultProps = {
   date: new Date(),
-  timeout: 3000
+  timeout: 60000
 };
 
-export default Countdown;
+const mapDispatchToProps = dispatch => ({
+  fetchGameData: () => dispatch(fetchGameData())
+});
+
+export default connect(
+  null,
+  mapDispatchToProps
+)(Countdown);
