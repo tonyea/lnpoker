@@ -2,6 +2,8 @@ import React, { PureComponent } from "react";
 import Card from "./Card";
 import axios from "axios";
 import { connect } from "react-redux";
+import { debug } from "util";
+import Countdown from "./Countdown";
 
 class Player extends PureComponent {
   constructor(props) {
@@ -50,10 +52,11 @@ class Player extends PureComponent {
       currentplayer,
       isSmallBlind,
       isBigBlind,
-      lastaction
+      lastaction,
+      action_timestamp
     } = this.props.myInfo;
 
-    const { disabledstate } = this.props;
+    const { disabledstate, timeout } = this.props;
     const isMaxBet = bet === this.props.maxbet;
 
     const renderCard = (cardInfo, cardKey) => {
@@ -82,6 +85,9 @@ class Player extends PureComponent {
 
     return (
       <div className="row player-row">
+        {currentplayer ? (
+          <Countdown date={action_timestamp} timeout={timeout} />
+        ) : null}
         <div
           className={
             currentplayer && !disabledstate
@@ -183,7 +189,8 @@ const mapStateToProps = state => ({
   disabledstate:
     state.game.roundname === "Showdown" || state.game.roundMessage
       ? Object.keys(state.game.roundMessage).length > 0
-      : false
+      : false,
+  timeout: state.game.timeout || 3000
 });
 
 export default connect(
