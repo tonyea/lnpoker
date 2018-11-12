@@ -47,6 +47,20 @@ class Table extends Component {
 
     this.state.socket.on("round message", msg => {
       this.props.setRoundMessage(msg);
+      if (msg.bankrupt && msg.bankrupt.length > 0) {
+        const amIBankrupt = msg.bankrupt.findIndex(
+          bankrupt => bankrupt.playerName === this.props.user.name
+        );
+        // return to home if bankrupt
+        if (amIBankrupt >= 0) {
+          this.setState({ gameover: true });
+          setTimeout(() => {
+            this.props.history.push("/");
+            this.props.exitGame();
+            this.state.socket.disconnect();
+          }, 3000);
+        }
+      }
     });
 
     this.state.socket.on("gameover", () => {
