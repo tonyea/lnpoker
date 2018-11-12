@@ -92,7 +92,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
       return cb(null, table);
     }
     // if max users are already seated then throw error
-    let minplayers, maxplayers, numplayers;
+    let minplayers, maxplayers, numplayers, bank;
     table = await findTableByID(tableID);
     minplayers = parseInt(table.minplayers);
     maxplayers = parseInt(table.maxplayers);
@@ -107,6 +107,16 @@ const joinTable = async (tableID, userID, emitter, cb) => {
       });
     if (numplayers === maxplayers) {
       throw "Maximum players alread seated.";
+    }
+
+    // if bank < buy in then throw error
+    await db
+      .query("SELECT bank FROM users where id = $1", [userID])
+      .then(res => {
+        bank = res.rows.length > 0 ? parseInt(res.rows[0].bank) : 0;
+      });
+    if (bank < table.minbuyin) {
+      throw "Insufficient funds.";
     }
 
     // force user to buy in to table amount
