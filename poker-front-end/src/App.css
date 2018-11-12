@@ -239,3 +239,7 @@ body {
 .register p {
   color: white;
 }
+
+.error-modal {
+  color: red;
+}

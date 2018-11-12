@@ -116,7 +116,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
         bank = res.rows.length > 0 ? parseInt(res.rows[0].bank) : 0;
       });
     if (bank < table.minbuyin) {
-      throw "Insufficient funds.";
+      throw { funds: "Insufficient funds." };
     }
 
     // force user to buy in to table amount

@@ -149,7 +149,7 @@ describe("Game Tests", () => {
     // test that a table was created with buy in of 10000
     await createGame(players[0], 1000000).then(res => {
       expect(res.statusCode).toBe(400);
-      expect(res.body).toContain("Insufficient funds.");
+      expect(res.body.funds).toContain("Insufficient funds.");
     });
 
     // user 1 creates a game with a small buy in
@@ -169,7 +169,7 @@ describe("Game Tests", () => {
 
     await joinGame(players[1], tableID).then(res => {
       expect(res.statusCode).toBe(400);
-      expect(res.body).toContain("Insufficient funds.");
+      expect(res.body.funds).toContain("Insufficient funds.");
     });
   });
 

@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import axios from "axios";
+import { GET_ERRORS } from "../../actions/types";
 
 class CreateTableModal extends Component {
   constructor(props) {
@@ -26,15 +27,21 @@ class CreateTableModal extends Component {
       return this.props.history.push("/login");
     }
     // if yes then submit to /api/game/create/buyin
-    await axios.post("/api/game/create/" + this.state.buyin).then(res => {
-      if (res.status === 200) {
-        console.log("redirecting to /play");
-        return this.props.history.push("/play");
-      }
-    });
+    await axios
+      .post("/api/game/create/" + this.state.buyin)
+      .then(res => {
+        if (res.status === 200) {
+          console.log("redirecting to /play");
+          return this.props.history.push("/play");
+        }
+      })
+      .catch(err => {
+        this.props.setErrors(err);
+      });
   };
 
   render() {
+    const { errors } = this.props;
     return (
       <div
         className="modal fade"
@@ -50,6 +57,7 @@ class CreateTableModal extends Component {
               <h5 className="modal-title" id="createTableModalCenterTitle">
                 Set buy-in amount in Satoshis
               </h5>
+
               <button
                 type="button"
                 className="close"
@@ -59,7 +67,11 @@ class CreateTableModal extends Component {
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
+
             <div className="modal-body">
+              {errors.funds && (
+                <div className="error-modal">{errors.funds}</div>
+              )}
               <div className="input-group">
                 <input
                   type="number"
@@ -92,7 +104,6 @@ class CreateTableModal extends Component {
                 type="button"
                 className="btn btn-success"
                 onClick={this.handleSubmit}
-                data-dismiss="modal"
               >
                 Save changes
               </button>
@@ -109,7 +120,19 @@ CreateTableModal.propTypes = {
 };
 
 const mapStateToProps = state => ({
-  auth: state.auth
+  auth: state.auth,
+  errors: state.errors
 });
 
-export default connect(mapStateToProps)(withRouter(CreateTableModal));
+const mapDispatchToProps = dispatch => ({
+  setErrors: err =>
+    dispatch({
+      type: GET_ERRORS,
+      payload: err.response.data
+    })
+});
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withRouter(CreateTableModal));
