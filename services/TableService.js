@@ -55,7 +55,7 @@ const createNewTable = async (userID, buyin, emitter, cb) => {
   let tableID;
   try {
     if (await isPlayerOnAnyTable(userID)) {
-      throw "Already playing at another table";
+      throw { alreadySeated: "Already playing at another table" };
     }
 
     await db
@@ -68,7 +68,10 @@ const createNewTable = async (userID, buyin, emitter, cb) => {
     // auto join newly created table
     await joinTable(tableID, userID, emitter, cb);
   } catch (e) {
-    return cb(e, null);
+    if (e.alreadySeated) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not create a table" }, null);
   }
 };
 
@@ -106,7 +109,7 @@ const joinTable = async (tableID, userID, emitter, cb) => {
         numplayers = res.rows.length > 0 ? parseInt(res.rows[0].numplayers) : 0;
       });
     if (numplayers === maxplayers) {
-      throw "Maximum players alread seated.";
+      throw { maxplayers: "Maximum players alread seated." };
     }
 
     // if bank < buy in then throw error
@@ -174,16 +177,16 @@ const joinTable = async (tableID, userID, emitter, cb) => {
     }
     table.players = await getPlayersAtTable(tableID, userID);
     // send socket emit to all users at table, except the user that joined, that a user has joined a table
-    console.log(
-      `10: ${userID} joined table, emitting update to all users at table`
-    );
     emitter
       .of("/game")
       .to(tableID)
       .emit("table updated");
     return cb(null, table);
   } catch (e) {
-    return cb(e, null);
+    if (e.maxplayers || e.funds) {
+      return cb(e, null);
+    }
+    return cb({ unspecifiedDBError: "Could not join table" }, null);
   }
 };
 
@@ -198,7 +201,10 @@ const getTableId = async (userID, cb) => {
     const tableID = await isPlayerOnAnyTable(userID);
     return cb(null, tableID);
   } catch (e) {
-    return cb(e, null);
+    return cb(
+      { unspecfiedDBError: "Could not search for user in tables" },
+      null
+    );
   }
 };
 
@@ -213,7 +219,7 @@ const getTable = async (userID, emitter, cb) => {
     const alreadyAtTable = await isPlayerOnAnyTable(userID);
 
     if (!alreadyAtTable) {
-      throw "Not in an active game";
+      throw { userNotFound: "Not in an active game" };
     }
 
     table = await findTableByID(alreadyAtTable);
@@ -245,7 +251,10 @@ const getTable = async (userID, emitter, cb) => {
       return cb(null, table);
     });
   } catch (e) {
-    return cb(e, null);
+    if (e.userNotFound) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not create a table" }, null);
   }
 };
 
@@ -328,7 +337,7 @@ const exitTable = async (userID, emitter, cb) => {
       .emit("table updated");
     return cb(null, "Success");
   } catch (e) {
-    return cb(e, null);
+    return cb({ unspecfiedDBError: "Could not exit table" }, null);
   }
 };
 
@@ -340,7 +349,6 @@ const exitTable = async (userID, emitter, cb) => {
  * @returns {function} Returns the callback function passed errors or success message
  */
 const check = async (userID, emitter, cb) => {
-  const errors = {};
   try {
     await checkIfUserAllowed(userID);
 
@@ -353,8 +361,7 @@ const check = async (userID, emitter, cb) => {
       [userID]
     );
     if (otherBetsRes.rows.length > 0) {
-      errors.notallowed = "Check not allowed, replay please";
-      throw errors;
+      throw { notallowed: "Check not allowed, replay please" };
     }
 
     const res = await db.query(
@@ -368,7 +375,10 @@ const check = async (userID, emitter, cb) => {
     errors.notupdated = "Did not update action and talked state";
     throw errors;
   } catch (e) {
-    return cb(e, null);
+    if (e.notallowed) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not check" }, null);
   }
 };
 
@@ -380,7 +390,6 @@ const check = async (userID, emitter, cb) => {
  * @returns {function} Returns the callback function passed errors or success message
  */
 const fold = async (userID, emitter, cb) => {
-  const errors = {};
   try {
     await checkIfUserAllowed(userID);
 
@@ -398,13 +407,15 @@ const fold = async (userID, emitter, cb) => {
       // if progress returns an object then return it to the callback
       return cb(null, await progress(userID, emitter));
     }
-    errors.notupdated = "Did not update action and talked state";
-    throw errors;
+    throw { notupdated: "Did not update action and talked state" };
 
     //Attemp to progress the game
     // progress(this.table);
   } catch (e) {
-    return cb(e, null);
+    if (e.notupdated || e.notallowed || e.timedout) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not fold" }, null);
   }
 };
 
@@ -442,7 +453,10 @@ const bet = async (userID, betAmount, emitter, cb) => {
     // if progress returns an object then return it to the callback
     return cb(null, await progress(userID, emitter));
   } catch (e) {
-    return cb(e, null);
+    if (e.notallowed || e.timedout) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not bet" }, null);
   }
 };
 
@@ -454,7 +468,6 @@ const bet = async (userID, betAmount, emitter, cb) => {
  * @returns {function} Returns the callback function passed errors or success message
  */
 const allin = async (userID, emitter, cb) => {
-  const errors = {};
   try {
     await checkIfUserAllowed(userID);
 
@@ -466,8 +479,7 @@ const allin = async (userID, emitter, cb) => {
     const totalChips = res.rows[0].chips;
 
     if (totalChips < 1) {
-      errors.notallowed = "Can't bet more than number of chips owned.";
-      throw errors;
+      throw { notallowed: "Can't bet more than number of chips owned." };
     }
 
     // add chips to my bet, remove from chips, set talked = true
@@ -483,7 +495,10 @@ const allin = async (userID, emitter, cb) => {
     await progress(userID, emitter);
     return cb(null, "All In");
   } catch (e) {
-    return cb(e, null);
+    if (e.notallowed || e.timedout) {
+      return cb(e, null);
+    }
+    return cb({ unspecfiedDBError: "Could not bet" }, null);
   }
 };
 
@@ -524,8 +539,11 @@ const call = async (userID, emitter, cb) => {
     return cb(null, await progress(userID, emitter));
     //Attemp to progress the game
   } catch (e) {
-    // errors.notallowed = "Bet not allowed, replay please";
-    return cb(e, null);
+    if (e.notallowed || e.timedout) {
+      return cb(e, null);
+    }
+
+    return cb({ unspecfiedDBError: "Could not call" }, null);
   }
 };
 

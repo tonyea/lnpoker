@@ -12,7 +12,7 @@ const findTableByID = async tableID => {
   );
 
   if (rows.length < 1) {
-    throw "Table not found";
+    throw { tablenotfound: "Table not found" };
   }
 
   return rows[0];
@@ -138,8 +138,7 @@ const checkIfUserAllowed = async userID => {
     });
 
   if (isShowdown) {
-    errors.notallowed = "No moves allowed after showdown";
-    throw errors;
+    throw { notallowed: "No moves allowed after showdown" };
   }
 
   // check if user is seated at table
@@ -155,21 +154,18 @@ const checkIfUserAllowed = async userID => {
     });
 
   if (isNotSeated) {
-    errors.notallowed = "Not yet seated";
-    throw errors;
+    throw { notallowed: "Not yet seated" };
   }
 
   // check if it is user's Turn
   if (isNotCurrentPlayer) {
-    errors.notallowed = "Wrong user has made a move";
-    throw errors;
+    throw { notallowed: "Wrong user has made a move" };
   }
 
   // check if user is timed out and force current player exit if true
   const isTimedOut = new Date(timestamp).getTime() + timeout <= Date.now();
   if (isTimedOut) {
-    errors.timedout = "User has timed out";
-    throw errors;
+    throw { timedout: "User has timed out" };
   }
 
   return true;

@@ -139,7 +139,9 @@ describe("Game Tests", () => {
     // creating table again throws error
     await createGame(players[0], 40000).then(res => {
       expect(res.statusCode).toBe(400);
-      expect(res.body).toContain("Already playing at another table");
+      expect(res.body.alreadySeated).toContain(
+        "Already playing at another table"
+      );
     });
   });
 
@@ -1474,7 +1476,7 @@ describe("Game Tests", () => {
     await db.query("UPDATE tables SET maxplayers = 3");
     await joinGame(players[3], tableID).then(res => {
       expect(res.statusCode).toBe(400);
-      expect(res.body).toContain("Maximum players alread seated.");
+      expect(res.body.maxplayers).toContain("Maximum players alread seated.");
     });
   });
 
@@ -1896,7 +1898,7 @@ describe("Game Tests", () => {
       .send()
       .then(res => {
         expect(res.statusCode).toBe(400);
-        expect(res.body).toEqual("Not in an active game");
+        expect(res.body.userNotFound).toEqual("Not in an active game");
       });
 
     // p1 gets kicked out because he was last player - get gameover message
@@ -1906,7 +1908,7 @@ describe("Game Tests", () => {
       .send()
       .then(res => {
         expect(res.statusCode).toBe(400);
-        expect(res.body).toEqual("Not in an active game");
+        expect(res.body.userNotFound).toEqual("Not in an active game");
       });
 
     await db.query("SELECT * FROM user_table").then(dbres => {
@@ -1973,7 +1975,7 @@ describe("Game Tests", () => {
       .send()
       .then(res => {
         expect(res.statusCode).toBe(400);
-        expect(res.body).toEqual("Not in an active game");
+        expect(res.body.userNotFound).toEqual("Not in an active game");
       });
 
     await db.query("SELECT * FROM user_table").then(dbres => {
