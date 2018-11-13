@@ -12,6 +12,7 @@ import {
 import { Prompt } from "react-router-dom";
 import { connect } from "react-redux";
 import PropTypes from "prop-types";
+import { getBankFromDB } from "../../actions/authActions";
 
 // socket
 import io from "socket.io-client";
@@ -30,7 +31,6 @@ class Table extends Component {
   async componentDidMount() {
     this.setState({ socket: io("http://localhost:8010/game") });
     console.log("mounted");
-    // debugger;
 
     // get table ID to pass to socket to put user in room
     // this.state.socket.on("connect", async () => {
@@ -54,9 +54,10 @@ class Table extends Component {
         // return to home if bankrupt
         if (amIBankrupt >= 0) {
           this.setState({ gameover: true });
-          setTimeout(() => {
+          setTimeout(async () => {
             this.props.history.push("/");
-            this.props.exitGame();
+            await this.props.exitGame();
+            await this.props.getBankFromDB();
             this.state.socket.disconnect();
           }, 3000);
         }
@@ -67,6 +68,7 @@ class Table extends Component {
       this.setState({ gameover: true });
       // this.props.setRoundMessage({});
       this.props.clearGameState({});
+      this.props.getBankFromDB();
       this.props.history.push("/");
       this.state.socket.disconnect();
     });
@@ -77,11 +79,12 @@ class Table extends Component {
     });
   }
 
-  componentWillUnmount() {
+  async componentWillUnmount() {
     console.log("table unmounting");
     // remove player from state when leaving table
     if (!this.state.gameover) {
-      this.props.exitGame();
+      await this.props.exitGame();
+      await this.props.getBankFromDB();
       this.state.socket.disconnect();
     }
   }
@@ -123,7 +126,8 @@ const mapDispatchToProps = dispatch => ({
   setRoundMessage: msg => dispatch(setRoundMessage(msg)),
   fetchGameData: () => dispatch(fetchGameData()),
   exitGame: () => dispatch(exitGame()),
-  clearGameState: () => dispatch(receiveGameData({}))
+  clearGameState: () => dispatch(receiveGameData({})),
+  getBankFromDB: () => dispatch(getBankFromDB())
 });
 
 export default connect(

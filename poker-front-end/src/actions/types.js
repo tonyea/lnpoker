@@ -8,3 +8,4 @@ export const RECEIVE_GAME_DATA = "RECEIVE_GAME_DATA";
 export const REQUEST_GAME_DATA = "REQUEST_GAME_DATA";
 export const GAME_LOADING = "GAME_LOADING";
 export const SET_ROUND_MESSAGE = "SET_ROUND_MESSAGE";
+export const GET_BANK = "GET_BANK";

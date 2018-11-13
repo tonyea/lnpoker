@@ -4,6 +4,7 @@ import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import axios from "axios";
 import { GET_ERRORS } from "../../actions/types";
+import { getBankFromDB } from "../../actions/authActions";
 
 class CreateTableModal extends Component {
   constructor(props) {
@@ -31,6 +32,7 @@ class CreateTableModal extends Component {
       .post("/api/game/create/" + this.state.buyin)
       .then(res => {
         if (res.status === 200) {
+          this.props.getBankFromDB();
           console.log("redirecting to /play");
           return this.props.history.push("/play");
         }
@@ -104,6 +106,7 @@ class CreateTableModal extends Component {
                 type="button"
                 className="btn btn-success"
                 onClick={this.handleSubmit}
+                data-dismiss="modal"
               >
                 Save changes
               </button>
@@ -129,7 +132,8 @@ const mapDispatchToProps = dispatch => ({
     dispatch({
       type: GET_ERRORS,
       payload: err.response.data
-    })
+    }),
+  getBankFromDB: () => dispatch(getBankFromDB())
 });
 
 export default connect(

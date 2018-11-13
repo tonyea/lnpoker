@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import axios from "axios";
+import { getBankFromDB } from "../../actions/authActions";
 
 class ActiveGames extends Component {
   constructor(props) {
@@ -45,6 +46,7 @@ class ActiveGames extends Component {
     } else {
       await axios.post("/api/game/join/" + this.gameID).then(res => {
         if (res.status === 200) {
+          this.props.getBankFromDB();
           return this.props.history.push("/play");
         }
       });
@@ -113,4 +115,11 @@ const mapStateToProps = state => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps)(withRouter(ActiveGames));
+const mapDispatchToProps = dispatch => ({
+  getBankFromDB: () => dispatch(getBankFromDB())
+});
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withRouter(ActiveGames));

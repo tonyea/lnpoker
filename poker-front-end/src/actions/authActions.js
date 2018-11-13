@@ -1,5 +1,5 @@
 import axios from "axios";
-import { GET_ERRORS, SET_CURRENT_USER } from "./types";
+import { GET_ERRORS, SET_CURRENT_USER, GET_BANK } from "./types";
 import setAuthToken from "../utils/setAuthToken";
 import jwt_decode from "jwt-decode";
 
@@ -58,4 +58,31 @@ export const logoutUser = () => {
     // Set current user to {} which will set isAuthenticated to false
     dispatch(setCurrentUser({}));
   };
+};
+
+// Set bank details on User
+const getBank = amount => {
+  return {
+    type: GET_BANK,
+    amount
+  };
+};
+
+/**
+ * Updates the bank balance in state
+ * @returns {Function} dispatch action function that updates state of bank in redux
+ */
+export const getBankFromDB = () => dispatch => {
+  axios
+    .get("/api/users/bank")
+    .then(res => {
+      // Set current user
+      dispatch(getBank(res.data.bank));
+    })
+    .catch(err => {
+      dispatch({
+        type: GET_ERRORS,
+        payload: err.response.data
+      });
+    });
 };
