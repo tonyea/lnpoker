@@ -26,18 +26,22 @@ class Player extends PureComponent {
   // Hit call post request
   callGame = async () => {
     await axios.post("/api/game/call");
+    this.setState({ betAmount: 0 });
   };
   // Hit check post request
   checkGame = async () => {
     await axios.post("/api/game/check");
+    this.setState({ betAmount: 0 });
   };
   // Hit bet post request
   betGame = async () => {
     await axios.post("/api/game/bet/" + this.state.betAmount);
+    this.setState({ betAmount: 0 });
   };
   // Hit fold post request
   foldGame = async () => {
     await axios.post("/api/game/fold");
+    this.setState({ betAmount: 0 });
   };
 
   render() {

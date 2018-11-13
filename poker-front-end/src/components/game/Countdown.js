@@ -12,18 +12,24 @@ class Countdown extends Component {
     };
   }
 
+  _isMounted = false;
+
   componentDidMount = () => {
+    this._isMounted = true;
     // update every second
     this.interval = setInterval(() => {
       const secondsToEnd = this.calculateCountdown(
         this.props.date,
         this.props.timeout
       );
-      secondsToEnd ? this.setState({ seconds: secondsToEnd }) : this.stop();
+      secondsToEnd && this._isMounted
+        ? this.setState({ seconds: secondsToEnd })
+        : this.stop();
     }, 1000);
   };
 
   componentWillUnmount = () => {
+    this._isMounted = false;
     this.stop();
   };
 
@@ -44,7 +50,9 @@ class Countdown extends Component {
 
   stop() {
     clearInterval(this.interval);
-    this.props.fetchGameData();
+    if (this._isMounted) {
+      this.props.fetchGameData();
+    }
   }
 
   addLeadingZeros(value) {

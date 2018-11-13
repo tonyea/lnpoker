@@ -17,24 +17,30 @@ class ActiveGames extends Component {
     this.joinGame = this.joinGame.bind(this);
   }
 
+  _isMounted = false;
+
   getActiveGames = async () => {
     await axios.get("/api/game/all").then(res => {
       console.log("component did mount refreshing list of games");
-      if (res.status === 200) {
-        this.setState({ activegames: res.data });
-      }
-      if (this.state.activegames.length === 0) {
-        this.setState({ loadingtext: "No active games, please create one." });
+      if (this._isMounted) {
+        if (res.status === 200) {
+          this.setState({ activegames: res.data });
+        }
+        if (this.state.activegames.length === 0) {
+          this.setState({ loadingtext: "No active games, please create one." });
+        }
       }
     });
   };
 
   componentDidMount() {
+    this._isMounted = true;
     this.setState();
     this.interval = setInterval(this.getActiveGames, 5000);
   }
 
   componentWillUnmount() {
+    this._isMounted = false;
     clearInterval(this.interval);
   }
 
