@@ -30,7 +30,7 @@ class Table extends Component {
 
   async componentDidMount() {
     this.setState({ socket: io("http://localhost:8010/game") });
-    console.log("mounted");
+    // console.log("mounted");
 
     // get table ID to pass to socket to put user in room
     // this.state.socket.on("connect", async () => {
@@ -38,9 +38,9 @@ class Table extends Component {
       // send user information to socket to put him in a room
       this.state.socket.emit("room", res.data, this.props.user.id);
       // Set state of game when table is mounted
-      console.log("40: emitted room info", res.data, this.props.user.id);
+      // console.log("40: emitted room info", res.data, this.props.user.id);
     });
-    console.log("50: client socket id on connect", this.state.socket.id);
+    // console.log("50: client socket id on connect", this.state.socket.id);
     // });
 
     await this.props.fetchGameData();
@@ -74,13 +74,13 @@ class Table extends Component {
     });
 
     this.state.socket.on("table updated", () => {
-      console.log("table updated");
+      // console.log("table updated");
       this.props.fetchGameData();
     });
   }
 
   async componentWillUnmount() {
-    console.log("table unmounting");
+    // console.log("table unmounting");
     // remove player from state when leaving table
     if (!this.state.gameover) {
       await this.props.exitGame();
@@ -90,7 +90,7 @@ class Table extends Component {
   }
 
   render() {
-    console.log("rendered");
+    // console.log("rendered");
 
     return (
       <div className="container table-container">

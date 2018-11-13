@@ -33,7 +33,7 @@ class CreateTableModal extends Component {
       .then(res => {
         if (res.status === 200) {
           this.props.getBankFromDB();
-          console.log("redirecting to /play");
+          // console.log("redirecting to /play");
           return this.props.history.push("/play");
         }
       })

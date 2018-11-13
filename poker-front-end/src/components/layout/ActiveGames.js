@@ -21,7 +21,7 @@ class ActiveGames extends Component {
 
   getActiveGames = async () => {
     await axios.get("/api/game/all").then(res => {
-      console.log("component did mount refreshing list of games");
+      // console.log("component did mount refreshing list of games");
       if (this._isMounted) {
         if (res.status === 200) {
           this.setState({ activegames: res.data });

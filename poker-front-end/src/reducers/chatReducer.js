@@ -10,7 +10,7 @@ export default function(state = initialState, action) {
     case ADD_MESSAGE:
       return [...state, action.message];
     case MESSAGE_RECEIVE_SUCCESS:
-      console.log("MESSAGE_RECEIVE_SUCCESS", action.logs);
+      // console.log("MESSAGE_RECEIVE_SUCCESS", action.logs);
       return action.logs;
     default:
       return state;
