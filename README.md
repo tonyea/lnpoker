@@ -5,13 +5,11 @@ are real-time game-play, multiple game rooms and support up to 5 players per roo
 
 ### Game Features
 
-* Texas Holdem game engine for up to 10 players per room based on [node-poker](https://github.com/mjhbell/node-poker).
-* Configure bots to join at intervals and play against humans or other bots. They will make use of a hand evaluator, and were very useful for debugging game logic.
+* Texas Holdem game engine for up to 5 players per room based on [node-poker](https://github.com/mjhbell/node-poker).
 * Multiple simultaneous game rooms with individual game rules (blinds, buyins, # of players, etc).
-* Real-time game and chat interaction between clients via web sockets.
-* Robust game records are stored which include each player action and along with game results.
-* Rudimentary friend system to check whether friends are online, chat, and join their games.
-* A basic web client server is available (node.js + backbone.js + websocket web browser client).
+* Real-time game interaction between clients via web sockets.
+* Robust game records are stored in a POSTGRES DB which include each player action and along with game results.
+* A basic React based web client server.
 
 ## Instructions
 
