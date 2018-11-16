@@ -1,10 +1,7 @@
-## node-poker-stack -- a node.js Texas Holdem game server and web client
+## A Texas Holdem game server (Node) and web client (React)
 
-node-poker-stack is a [node.js](http://nodejs.org) Texas Holdem game server and web client. Some notable features
-are real-time game-play and chat, multiple game rooms, support up to 10 players per room with a combination
-of human and bot players.
-
-## Features
+A Texas Holdem game server and web client built to test out the Bitcoin Lightning Network. Some notable features
+are real-time game-play, multiple game rooms and support up to 5 players per room.
 
 ### Game Features
 
@@ -16,38 +13,85 @@ of human and bot players.
 * Rudimentary friend system to check whether friends are online, chat, and join their games.
 * A basic web client server is available (node.js + backbone.js + websocket web browser client).
 
-### Built Using Pomelo
-
-* Real-time communication between server and client.
-* Distributed architecture to scale painlessly.
-* Pluggable architecture to easily add new features.
-* SDKs for a variety of clients (javascript, flash, android, iOS, cocos2d-x, C).
-* See [Pomelo Framework](http://github.com/NetEase/pomelo) for more information.
-
-### Whats Missing?
-
-* User and table data is persisted to file store rather than database.
-* Web browser client could be improved (uses vanilla bootstrap.js).
-* Add more client platforms (android, ios, phonegap, etc).
-
 ## Instructions
 
-1. git clone https://github.com/vampserv/node-poker-stack.git
-2. ./npm-install.sh
-3. node game-server/app
-4. open another terminal window
-5. node web-server/app
-6. go to http://localhost:3002 to access web client
-7. register a new user and login
-8. create a game room, join the game, and wait
-9. bots will join the game to play
+### Architecture dependencies
+1. Node >=8.12.0
+  1.1 NPM
+2. Postgres >=10.5
+  2.1 https://www.postgresql.org/download/linux/ubuntu/
+
+### DB Setup
+1. Create a system user, e.g. lnpoker
+2. Create a postgres role with the same username, e.g. lnpoker
+```
+sudo adduser lnpoker # go through prompts for password etc.
+
+su - postgres # switch to postgres user
+
+createuser --interactive # role name should be same as system user created above
+
+```
+3. Create a database with the same name
+```
+psql # enter psql command line
+
+create database lnpoker; # dbname should be same as role name and system user created earlier
+
+```
+4. Switch to newly created system user and create test DB
+```
+su - lnpoker
+
+psql # enter psql command line
+
+create database lnpokertest;
+```
+5. Download file in the repo named "lnpokerschema.sql" and move it to the home folder of our user
+```
+cd \home\lnpoker
+
+https://raw.githubusercontent.com/tonyea/lnpoker/master/lnpokerschema.sql
+```
+6. Import DB schema into the two DBs.
+```
+psql -U lnpoker lnpoker < lnpokerschema.sql # as system user lnpoker
+psql -U lnpoker lnpokertest < lnpokerschema.sql # as system user lnpoker
+```
+### Repo Setup
+1. Clone repo and install dependencies
+```
+git clone https://github.com/tonyea/lnpoker.git
+
+npm install
+
+npm run client-install # package.json command that installs dependencies in client folder
+```
+2. Create a .env file in root folder of repo
+```
+PORT=5000
+SOCKET_PORT=8010
+jwtSecretOrKey=createownkeyhere
+PGHOST=localhost 
+PGUSER=lnpoker
+PGDATABASE=lnpoker
+PGTESTDATABASE=lnpokertest
+PGPASSWORD=passwordcreatedearlier
+PGPORT=5432 # in psql as lnpoker, check /conninfo to find port if unsure
+```
+3. Run tests and check if DB connection worked
+```
+npm run test
+```
+4. Serve file
+5. Visit localhost, create at least two profiles, create a game as profile 1 and join game as profile 2 (separate browser or anonymous browsing) to play.
 
 
 ## License
 
 (The MIT License)
 
-Copyright (c) 2012-2014 Edward Yang
+Copyright (c) 2012-2014 Anthony Ebin
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
