@@ -17,9 +17,8 @@ are real-time game-play, multiple game rooms and support up to 5 players per roo
 
 ### Architecture dependencies
 1. Node >=8.12.0
-  1.1 NPM
-2. Postgres >=10.5
-  2.1 https://www.postgresql.org/download/linux/ubuntu/
+2. NPM
+3. Postgres >=10.5 # https://www.postgresql.org/download/linux/ubuntu/
 
 ### DB Setup
 1. Create a system user, e.g. lnpoker
