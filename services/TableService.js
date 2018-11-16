@@ -39,7 +39,7 @@ const all = async cb => {
     }
     return cb(null, rows);
   } catch (e) {
-    return cb(e, null);
+    return cb({ unspecfiedDBError: "Could not get games" }, null);
   }
 };
 
