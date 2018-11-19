@@ -17,6 +17,9 @@ const validateLoginInput = require("../../validation/login");
 // passport for authenticate getbank route
 const passport = require("passport");
 
+// connection to Lightning Node
+const lnrpc = require("../../ln-grpc");
+
 // @route   POST api/users/register
 // @desc    Register user
 // @access  Public
@@ -125,6 +128,41 @@ router.get(
       [req.user.id]
     );
     return res.json(rows[0]);
+  }
+);
+
+// @route   GET api/users/bank
+// @desc    Generate an LND invoice for a specified amount
+// @access  Public
+router.get(
+  "/invoice/:amount",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    try {
+      // create listener for invoice
+      let call = lnrpc.subscribeInvoices({});
+      call
+        .on("data", invoice => {
+          console.log("data", invoice);
+        })
+        .on("end", () => {
+          // The server has finished sending
+        })
+        .on("status", status => {
+          // Process status
+          console.log("Current status" + status);
+        });
+
+      // generate invoice for specified amount
+      lnrpc.addInvoice({ value: req.params.amount }, (err, resp) => {
+        if (err !== null) {
+          return res.send("Could not generate invoice");
+        }
+        return res.json(resp.payment_request);
+      });
+    } catch (error) {
+      return res.send("Could not generate invoice");
+    }
   }
 );
 
