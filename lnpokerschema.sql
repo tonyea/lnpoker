@@ -96,7 +96,7 @@ CREATE TABLE public.tables (
     bigblind integer DEFAULT 2000 NOT NULL,
     minplayers smallint DEFAULT 2 NOT NULL,
     maxplayers smallint DEFAULT 5 NOT NULL,
-    minbuyin integer DEFAULT 100000 NOT NULL,
+    minbuyin integer DEFAULT 100 NOT NULL,
     maxbuyin integer DEFAULT 100000000 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     deck text[] DEFAULT '{}'::text[],
@@ -189,7 +189,7 @@ CREATE TABLE public.users (
     username character varying(100) NOT NULL,
     password character varying(256) NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    bank integer DEFAULT 100000 NOT NULL,
+    bank integer DEFAULT 0 NOT NULL,
     CONSTRAINT users_check CHECK ((bank >= 0))
 );
 
