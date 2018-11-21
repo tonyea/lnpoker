@@ -142,15 +142,22 @@ router.get(
       // create listener for invoice
       let call = lnrpc.subscribeInvoices({});
       call
-        .on("data", invoice => {
-          // console.log("data", invoice);
+        .on("data", async invoice => {
+          // if invoice is paid then update users bank details
+          if (invoice.amt_paid_sat >= invoice.value) {
+            await db.query("UPDATE users SET bank = bank + $1 WHERE id = $2", [
+              invoice.amt_paid_sat,
+              req.user.id
+            ]);
+          }
+          console.log("data", invoice);
         })
         .on("end", () => {
           // The server has finished sending
         })
         .on("status", status => {
           // Process status
-          // console.log("Current status" + status);
+          console.log("Current status" + status);
         });
 
       // generate invoice for specified amount and share with client along with node uri
