@@ -23,12 +23,17 @@ class Navbar extends Component {
     const authLinks = (
       <ul className="navbar-nav ml-auto">
         <li className="nav-item">
+          <a href="" className="nav-link">
+            Balance: {numFormat(user.bank, 1)} Sats
+          </a>
+        </li>
+        <li className="nav-item">
           <a
             href=""
             className="nav-link"
             onClick={this.onLogoutClick.bind(this)}
           >
-            Balance: {numFormat(user.bank, 1)} Sats || Logout {user.username}
+            Logout {user.username}
           </a>
         </li>
       </ul>
