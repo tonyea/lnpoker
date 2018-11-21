@@ -28,7 +28,10 @@ class Table extends Component {
     };
   }
 
+  _isMounted = false;
+
   async componentDidMount() {
+    this._isMounted = true;
     this.setState({ socket: io("http://localhost:8010/game") });
     // console.log("mounted");
 
@@ -74,12 +77,15 @@ class Table extends Component {
     });
 
     this.state.socket.on("table updated", () => {
-      // console.log("table updated");
-      this.props.fetchGameData();
+      if (this._isMounted) {
+        // console.log("table updated");
+        this.props.fetchGameData();
+      }
     });
   }
 
   async componentWillUnmount() {
+    this._isMounted = false;
     // console.log("table unmounting");
     // remove player from state when leaving table
     if (!this.state.gameover) {
