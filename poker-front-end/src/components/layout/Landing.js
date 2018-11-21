@@ -1,8 +1,99 @@
 import React, { Component } from "react";
 import CreateTableModal from "./CreateTableModal";
+import CreateTablePaymentModal from "./CreateTablePaymentModal";
 import ActiveGames from "./ActiveGames";
+import { withRouter } from "react-router-dom";
+import { connect } from "react-redux";
+import axios from "axios";
+import { GET_ERRORS } from "../../actions/types";
+import { getBankFromDB } from "../../actions/authActions";
+import isEmpty from "../../validation/is-empty";
 
 class Landing extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      modalshow: false,
+      paymentmodalshow: false,
+      buyin: 100,
+      paymentrequest: null,
+      nodeuri: null
+    };
+    this.modalClose = this.modalClose.bind(this);
+    this.modalOpen = this.modalOpen.bind(this);
+    this.paymentModalClose = this.paymentModalClose.bind(this);
+    this.paymentModalOpen = this.paymentModalOpen.bind(this);
+    this.handleChange = this.handleChange.bind(this);
+    this.nextModal = this.nextModal.bind(this);
+  }
+
+  handleChange = e => {
+    this.setState({ buyin: e.target.value });
+  };
+
+  modalClose = () => {
+    this.setState({ modalshow: false });
+  };
+  modalOpen = () => {
+    this.setState({ modalshow: true });
+  };
+  paymentModalClose = () => {
+    this.setState({ paymentmodalshow: false });
+  };
+  paymentModalOpen = () => {
+    this.setState({ paymentmodalshow: true });
+  };
+
+  nextModal = () => {
+    // debugger;
+    if (isEmpty(this.props.errors)) {
+      this.setState({ modalshow: false });
+      this.createPaymentRequest();
+      this.setState({ paymentmodalshow: true });
+    }
+  };
+
+  handleCreateGame = async () => {
+    // check if auth
+    if (!this.props.auth.isAuthenticated) {
+      // redirect to login
+      return this.props.history.push("/login");
+    }
+    // if yes then submit to /api/game/create/buyin
+    await axios
+      .post("/api/game/create/" + this.state.buyin)
+      .then(res => {
+        if (res.status === 200) {
+          this.props.getBankFromDB();
+          // console.log("redirecting to /play");
+          return this.props.history.push("/play");
+        }
+      })
+      .catch(err => {
+        this.props.setErrors(err);
+      });
+  };
+
+  createPaymentRequest = async () => {
+    // check if auth
+    if (!this.props.auth.isAuthenticated) {
+      // redirect to login
+      return this.props.history.push("/login");
+    }
+    // if yes then submit to /api/game/create/buyin
+    await axios
+      .get("/api/users/invoice/" + this.state.buyin)
+      .then(res => {
+        if (res.status === 200) {
+          this.setState({ paymentrequest: res.data.pay_req });
+          this.setState({ nodeuri: res.data.node });
+        }
+      })
+      .catch(err => {
+        this.props.setErrors(err);
+      });
+  };
+
   render() {
     return (
       <div className="landing container">
@@ -21,13 +112,24 @@ class Landing extends Component {
           <button
             type="button"
             className="btn btn-success btn-lg"
-            data-toggle="modal"
-            data-target="#createTableModal"
+            onClick={this.modalOpen}
           >
             Create Table
           </button>
 
-          <CreateTableModal />
+          <CreateTableModal
+            modalshow={this.state.modalshow}
+            modalClose={this.modalClose}
+            callNextModal={this.nextModal}
+            buyin={this.state.buyin}
+            handleChange={this.handleChange}
+          />
+          <CreateTablePaymentModal
+            modalshow={this.state.paymentmodalshow}
+            modalClose={this.paymentModalClose}
+            paymentrequest={this.state.paymentrequest}
+            nodeuri={this.state.nodeuri}
+          />
         </div>
 
         <ActiveGames />
@@ -36,4 +138,21 @@ class Landing extends Component {
   }
 }
 
-export default Landing;
+const mapStateToProps = state => ({
+  auth: state.auth,
+  errors: state.errors
+});
+
+const mapDispatchToProps = dispatch => ({
+  setErrors: err =>
+    dispatch({
+      type: GET_ERRORS,
+      payload: err.response.data
+    }),
+  getBankFromDB: () => dispatch(getBankFromDB())
+});
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps
+)(withRouter(Landing));

@@ -131,7 +131,7 @@ router.get(
   }
 );
 
-// @route   GET api/users/bank
+// @route   GET api/users/invoice/:amount
 // @desc    Generate an LND invoice for a specified amount
 // @access  Public
 router.get(
@@ -143,22 +143,25 @@ router.get(
       let call = lnrpc.subscribeInvoices({});
       call
         .on("data", invoice => {
-          console.log("data", invoice);
+          // console.log("data", invoice);
         })
         .on("end", () => {
           // The server has finished sending
         })
         .on("status", status => {
           // Process status
-          console.log("Current status" + status);
+          // console.log("Current status" + status);
         });
 
-      // generate invoice for specified amount
+      // generate invoice for specified amount and share with client along with node uri
       lnrpc.addInvoice({ value: req.params.amount }, (err, resp) => {
         if (err !== null) {
           return res.send("Could not generate invoice");
         }
-        return res.json(resp.payment_request);
+        return res.json({
+          pay_req: resp.payment_request,
+          node: process.env.NODEURI
+        });
       });
     } catch (error) {
       return res.send("Could not generate invoice");
