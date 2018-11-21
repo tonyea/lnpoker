@@ -4,6 +4,7 @@ import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import axios from "axios";
 import { getBankFromDB } from "../../actions/authActions";
+import { GET_ERRORS } from "../../actions/types";
 
 class ActiveGames extends Component {
   constructor(props) {
@@ -50,16 +51,31 @@ class ActiveGames extends Component {
       // redirect to login
       return this.props.history.push("/login");
     } else {
-      await axios.post("/api/game/join/" + this.gameID).then(res => {
-        if (res.status === 200) {
-          this.props.getBankFromDB();
-          return this.props.history.push("/play");
-        }
-      });
+      console.log("buyin", this.buyin);
+      if (this.props.auth.user.bank >= this.buyin) {
+        await axios
+          .post("/api/game/join/" + this.gameID)
+          .then(res => {
+            if (res.status === 200) {
+              this.props.getBankFromDB();
+              return this.props.history.push("/play");
+            }
+          })
+          .catch(err => {
+            this.props.setErrors(err);
+          });
+      } else {
+        this.props.setBuyIn(this.buyin);
+        this.props.setGameID(this.gameID);
+        this.props.createPaymentRequest();
+        this.props.paymentmodalshow();
+      }
     }
   };
 
   render() {
+    const { errors } = this.props;
+
     const renderGameRow = (gameInfo, gameKey) => {
       // return <Card card={gameInfo} key={gameKey} />;
       return (
@@ -72,7 +88,10 @@ class ActiveGames extends Component {
             <button
               type="button"
               className="btn btn-secondary"
-              ref={() => (this.gameID = gameInfo.id)}
+              ref={() => {
+                this.gameID = gameInfo.id;
+                this.buyin = gameInfo.minbuyin;
+              }}
               onClick={this.joinGame}
             >
               Join
@@ -96,6 +115,14 @@ class ActiveGames extends Component {
 
     return (
       <div>
+        {errors.funds && (
+          <div className="alert alert-danger alert-dismissible">
+            <a className="close" data-dismiss="alert" aria-label="close">
+              &times;
+            </a>
+            {errors.funds}
+          </div>
+        )}
         <table className="allgames table table-striped table-dark">
           <thead>
             <tr>
@@ -118,10 +145,16 @@ ActiveGames.propTypes = {
 };
 
 const mapStateToProps = state => ({
-  auth: state.auth
+  auth: state.auth,
+  errors: state.errors
 });
 
 const mapDispatchToProps = dispatch => ({
+  setErrors: err =>
+    dispatch({
+      type: GET_ERRORS,
+      payload: err.response.data
+    }),
   getBankFromDB: () => dispatch(getBankFromDB())
 });
 

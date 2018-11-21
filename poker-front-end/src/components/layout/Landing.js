@@ -17,7 +17,8 @@ class Landing extends Component {
       paymentmodalshow: false,
       buyin: 100,
       paymentrequest: null,
-      nodeuri: null
+      nodeuri: null,
+      gameID: null
     };
     this.modalClose = this.modalClose.bind(this);
     this.modalOpen = this.modalOpen.bind(this);
@@ -44,6 +45,14 @@ class Landing extends Component {
   };
   paymentModalOpen = () => {
     this.setState({ paymentmodalshow: true });
+  };
+
+  setBuyIn = amt => {
+    this.setState({ buyin: amt });
+  };
+
+  setGameID = id => {
+    this.setState({ gameID: id });
   };
 
   nextModal = () => {
@@ -85,6 +94,19 @@ class Landing extends Component {
       this.props.getBankFromDB();
       if (this.props.auth.user.bank >= this.state.buyin) {
         clearInterval(this.interval);
+        if (this.state.gameID !== null) {
+          await axios
+            .post("/api/game/join/" + this.state.gameID)
+            .then(res => {
+              if (res.status === 200) {
+                this.props.getBankFromDB();
+                return this.props.history.push("/play");
+              }
+            })
+            .catch(err => {
+              this.props.setErrors(err);
+            });
+        }
         this.handleCreateGame();
       }
     }
@@ -165,7 +187,12 @@ class Landing extends Component {
           />
         </div>
 
-        <ActiveGames />
+        <ActiveGames
+          paymentmodalshow={this.paymentModalOpen}
+          setBuyIn={this.setBuyIn}
+          setGameID={this.setGameID}
+          createPaymentRequest={this.createPaymentRequest}
+        />
       </div>
     );
   }
