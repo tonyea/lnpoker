@@ -27,6 +27,8 @@ class Landing extends Component {
     this.nextModal = this.nextModal.bind(this);
   }
 
+  _isMounted = false;
+
   handleChange = e => {
     this.setState({ buyin: e.target.value });
   };
@@ -47,9 +49,13 @@ class Landing extends Component {
   nextModal = () => {
     // debugger;
     if (isEmpty(this.props.errors)) {
-      this.setState({ modalshow: false });
-      this.createPaymentRequest();
-      this.setState({ paymentmodalshow: true });
+      if (this.props.auth.user.bank >= this.state.buyin) {
+        this.handleCreateGame();
+      } else {
+        this.setState({ modalshow: false });
+        this.createPaymentRequest();
+        this.setState({ paymentmodalshow: true });
+      }
     }
   };
 
@@ -74,6 +80,16 @@ class Landing extends Component {
       });
   };
 
+  checkIfPaid = async () => {
+    if (this._isMounted) {
+      this.props.getBankFromDB();
+      if (this.props.auth.user.bank >= this.state.buyin) {
+        clearInterval(this.interval);
+        this.handleCreateGame();
+      }
+    }
+  };
+
   createPaymentRequest = async () => {
     // check if auth
     if (!this.props.auth.isAuthenticated) {
@@ -87,11 +103,28 @@ class Landing extends Component {
         if (res.status === 200) {
           this.setState({ paymentrequest: res.data.pay_req });
           this.setState({ nodeuri: res.data.node });
+          // check server every 5 secs for payment
+          this.interval = setInterval(this.checkIfPaid, 5000);
         }
       })
       .catch(err => {
         this.props.setErrors(err);
       });
+  };
+
+  componentWillUnmount = () => {
+    this._isMounted = false;
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
+  };
+
+  componentDidMount = () => {
+    this._isMounted = true;
+    // check if auth
+    if (this.props.auth.isAuthenticated) {
+      this.props.getBankFromDB();
+    }
   };
 
   render() {
