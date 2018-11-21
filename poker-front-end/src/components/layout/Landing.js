@@ -106,8 +106,9 @@ class Landing extends Component {
             .catch(err => {
               this.props.setErrors(err);
             });
+        } else {
+          this.handleCreateGame();
         }
-        this.handleCreateGame();
       }
     }
   };
