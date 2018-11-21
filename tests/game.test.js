@@ -1495,8 +1495,11 @@ describe("Game Tests", () => {
       ])
       .then(res => (p2BankInitial = res.rows[0].bank));
 
-    let tableID, buyin, p1BankPost, p2BankPost;
+    let tableID, buyin, p1BankPost, p2BankPost, bigblind, smallblind;
     buyin = 20000;
+    smallblind = Math.ceil(buyin * 0.1);
+    bigblind = smallblind * 2;
+
     // create a game with player 1
     await createGame(players[0], buyin).then(res => (tableID = res.body.id));
 
@@ -1534,7 +1537,7 @@ describe("Game Tests", () => {
         players[0].playerName
       ])
       .then(res => (p1BankPost = res.rows[0].bank));
-    expect(p1BankPost).toEqual(p1BankInitial - 2000);
+    expect(p1BankPost).toEqual(p1BankInitial - bigblind);
 
     // opponent gets kicked when only one player left
     // he banks his chips + pot amount
@@ -1544,7 +1547,7 @@ describe("Game Tests", () => {
         players[1].playerName
       ])
       .then(res => (p2BankPost = res.rows[0].bank));
-    expect(p2BankPost).toEqual(p2BankInitial + 2000);
+    expect(p2BankPost).toEqual(p2BankInitial + bigblind);
 
     // table gets deleted
     await db.query("SELECT id FROM tables").then(res => {
@@ -1588,7 +1591,7 @@ describe("Game Tests", () => {
         players[0].playerName
       ])
       .then(res => (p1BankPost = res.rows[0].bank));
-    expect(p1BankInitial).toEqual(p1BankPost + 2000);
+    expect(p1BankInitial).toEqual(p1BankPost + bigblind);
 
     // p2 gets kicked out for there being only one player left.
     // p2 bank should be +2000
@@ -1597,7 +1600,7 @@ describe("Game Tests", () => {
         players[1].playerName
       ])
       .then(res => (p2BankPost = res.rows[0].bank));
-    expect(p2BankInitial).toEqual(p2BankPost - 2000);
+    expect(p2BankInitial).toEqual(p2BankPost - bigblind);
 
     // no users or table left
     await db
@@ -1628,8 +1631,16 @@ describe("Game Tests", () => {
       ])
       .then(res => (p3BankInitial = res.rows[0].bank));
 
-    let tableID, buyin, p1BankPost, p2BankPost, p3BankPost;
+    let tableID,
+      buyin,
+      p1BankPost,
+      p2BankPost,
+      p3BankPost,
+      smallblind,
+      bigblind;
     buyin = 30000;
+    smallblind = Math.ceil(buyin * 0.1);
+    bigblind = smallblind * 2;
 
     // create a game with player 1
     await createGame(players[0], buyin).then(res => (tableID = res.body.id));
@@ -1676,7 +1687,7 @@ describe("Game Tests", () => {
         players[0].playerName
       ])
       .then(res => (p1BankPost = res.rows[0].bank));
-    expect(p1BankPost).toEqual(p1BankInitial - 2000);
+    expect(p1BankPost).toEqual(p1BankInitial - bigblind);
 
     // p2 and p3 play continue to Deal
     await request(app)
@@ -1752,8 +1763,10 @@ describe("Game Tests", () => {
       )
       .then(res => (sumBankBeforeGame = res.rows[0].sumbank));
 
-    let tableID, buyin;
+    let tableID, buyin, smallblind, bigblind;
     buyin = 40000;
+    smallblind = Math.ceil(buyin * 0.1);
+    bigblind = smallblind * 2;
 
     // create a game with player 1
     await createGame(players[0], buyin).then(res => (tableID = res.body.id));
@@ -1783,7 +1796,7 @@ describe("Game Tests", () => {
         ).chips;
 
         // 40000 - SB 1000 + SB 1000 + BB 2000
-        expect(mychips).toBe(42000);
+        expect(mychips).toBe(buyin + bigblind);
       });
 
     // p2, p3 and p4 play continue to Deal
@@ -1872,8 +1885,11 @@ describe("Game Tests", () => {
       .then(res => (p2BankInitial = res.rows[0].bank));
 
     // p1 creates a game
-    let tableID;
+    let tableID, smallblind, bigblind;
     let buyin = 12000;
+    smallblind = Math.ceil(buyin * 0.1);
+    bigblind = smallblind * 2;
+
     await createGame(players[0], buyin).then(res => (tableID = res.body.id));
     // p2 joins a game
     await joinGame(players[1], tableID);
@@ -1927,8 +1943,8 @@ describe("Game Tests", () => {
         const p1BankPost = dbres.rows[0].bank;
         const p2BankPost = dbres.rows[1].bank;
 
-        expect(p1BankPost).toBe(p1BankInitial + 1000);
-        expect(p2BankPost).toBe(p2BankInitial - 1000);
+        expect(p1BankPost).toBe(p1BankInitial + smallblind);
+        expect(p2BankPost).toBe(p2BankInitial - smallblind);
         expect(p1BankPost + p2BankPost).toBe(p2BankInitial + p1BankInitial);
       });
   });
@@ -1950,8 +1966,11 @@ describe("Game Tests", () => {
       .then(res => (p2BankInitial = res.rows[0].bank));
 
     // p1 creates a game
-    let tableID;
+    let tableID, smallblind, bigblind;
     let buyin = 12000;
+    smallblind = Math.ceil(buyin * 0.1);
+    bigblind = smallblind * 2;
+
     await createGame(players[0], buyin).then(res => (tableID = res.body.id));
     // p2 joins a game
     await joinGame(players[1], tableID);
@@ -1994,8 +2013,8 @@ describe("Game Tests", () => {
         const p1BankPost = dbres.rows[0].bank;
         const p2BankPost = dbres.rows[1].bank;
 
-        expect(p1BankPost).toBe(p1BankInitial + 1000);
-        expect(p2BankPost).toBe(p2BankInitial - 1000);
+        expect(p1BankPost).toBe(p1BankInitial + smallblind);
+        expect(p2BankPost).toBe(p2BankInitial - smallblind);
         expect(p1BankPost + p2BankPost).toBe(p2BankInitial + p1BankInitial);
       });
   });

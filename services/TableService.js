@@ -58,10 +58,14 @@ const createNewTable = async (userID, buyin, emitter, cb) => {
       throw { alreadySeated: "Already playing at another table" };
     }
 
+    // sb should be 10% of buyin rounded up
+    const smallblind = Math.ceil(buyin * 0.1);
+    const bigblind = smallblind * 2;
+
     await db
       .query(
-        "INSERT INTO tables (minbuyin) VALUES ($1) returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status ",
-        [buyin]
+        "INSERT INTO tables (minbuyin, smallblind, bigblind) VALUES ($1, $2, $3) returning id, smallblind, bigblind, minplayers, maxplayers, minbuyin, maxbuyin, pot, roundname, board, status ",
+        [buyin, smallblind, bigblind]
       )
       .then(res => (tableID = res.rows[0].id));
 
