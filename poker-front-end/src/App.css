@@ -255,3 +255,8 @@ body {
   word-wrap: break-word;
   padding-bottom: 14px;
 }
+
+.modal-body-payreq-withdaw-text {
+  width: 100%;
+  min-height: 110px;
+}

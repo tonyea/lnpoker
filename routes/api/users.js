@@ -133,7 +133,7 @@ router.get(
 
 // @route   GET api/users/invoice/:amount
 // @desc    Generate an LND invoice for a specified amount
-// @access  Public
+// @access  Private
 router.get(
   "/invoice/:amount",
   passport.authenticate("jwt", { session: false }),
@@ -172,6 +172,60 @@ router.get(
       });
     } catch (error) {
       return res.send("Could not generate invoice");
+    }
+  }
+);
+
+// @route   GET api/users/withdraw/:payreq
+// @desc    Issue withdrawal to specified payment request
+// @access  Private
+router.post(
+  "/withdraw/:payreq",
+  passport.authenticate("jwt", { session: false }),
+  async (req, res) => {
+    try {
+      // check if user balance is >= 0
+      await db
+        .query("SELECT bank FROM users WHERE id = $1", [req.user.id])
+        .then(resp => {
+          const balance = resp.rows[0].bank;
+
+          if (balance > 0) {
+            // if yes then refund amount
+            const call = lnrpc.sendPayment({});
+            call.on("data", async response => {
+              // A response was received from the server.
+              console.log("payreq res", response);
+              if (response.payment_error === null) {
+                console.log("Withdrawal sent");
+              } else {
+                // put the money back in the db
+                await db.query("UPDATE users SET bank = $1 WHERE id = $2", [
+                  balance,
+                  req.user.id
+                ]);
+              }
+            });
+            call.on("status", status => {
+              // The current status of the stream.
+              console.log("payreq status", status);
+            });
+            call.on("end", () => {
+              // The server has closed the stream.
+              console.log("payreq closed stream");
+            });
+
+            call.write({ payment_request: req.params.payreq });
+          }
+        });
+
+      // set bank balance to 0
+      await db.query("UPDATE users SET bank = 0 WHERE id = $1", [req.user.id]);
+      return res.json("Withdrawal request sent...");
+    } catch (error) {
+      console.log("err", error);
+      if (error.payment_error) return res.json(error.payment_error);
+      return res.json("Error in attempting withdrawal");
     }
   }
 );
