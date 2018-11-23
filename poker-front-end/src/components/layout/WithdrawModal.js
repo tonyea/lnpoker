@@ -6,7 +6,7 @@ class WithdrawalModal extends Component {
     super(props);
 
     this.state = {
-      payreq: null
+      payreq: ""
     };
 
     this.submitWithdrawal = this.submitWithdrawal.bind(this);

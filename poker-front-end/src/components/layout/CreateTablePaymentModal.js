@@ -4,7 +4,7 @@ import QRCode from "qrcode.react";
 
 export default props => {
   const { modalshow, modalClose, paymentrequest, nodeuri } = props;
-  if (paymentrequest === null || nodeuri === null) {
+  if (paymentrequest === "" || nodeuri === "") {
     return null;
   }
   return (

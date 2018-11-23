@@ -16,8 +16,8 @@ class Landing extends Component {
       modalshow: false,
       paymentmodalshow: false,
       buyin: 100,
-      paymentrequest: null,
-      nodeuri: null,
+      paymentrequest: "",
+      nodeuri: "",
       gameID: null
     };
     this.modalClose = this.modalClose.bind(this);
@@ -63,7 +63,9 @@ class Landing extends Component {
       } else {
         this.setState({ modalshow: false });
         this.createPaymentRequest();
-        this.setState({ paymentmodalshow: true });
+        if (isEmpty(this.props.errors)) {
+          this.setState({ paymentmodalshow: true });
+        }
       }
     }
   };
@@ -119,6 +121,7 @@ class Landing extends Component {
       // redirect to login
       return this.props.history.push("/login");
     }
+    debugger;
     // if yes then submit to /api/game/create/buyin
     await axios
       .get("/api/users/invoice/" + this.state.buyin)
