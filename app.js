@@ -2,6 +2,10 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
 const passport = require("passport");
+const path = require("path");
+
+// include env variables
+require("dotenv").config();
 
 // get route files
 const users = require("./routes/api/users");
@@ -26,5 +30,17 @@ app.get("/", (req, res) => {
 // connect express to route file
 app.use("/api/users", users);
 app.use("/api/game", game);
+
+// serve static assets if in production
+if (process.env.NODE_ENV === "production") {
+  // set static folder
+  app.use(express.static("poker-front-end/build"));
+
+  app.get("*", (req, res) => {
+    res.sendFile(
+      path.resolve(__dirname, "poker-front-end", "build", "index.html")
+    );
+  });
+}
 
 module.exports = app;
