@@ -52,7 +52,6 @@
     "passport-jwt": "^4.0.0",
     "pg": "^7.4.3",
     "qrcode.react": "^0.8.0",
-    "react-bootstrap4-modal": "^1.7.0",
     "socket.io": "^2.1.1",
     "validator": "^10.4.0"
   },
