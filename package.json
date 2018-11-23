@@ -24,7 +24,8 @@
     "watch": "NODE_ENV=test jest --watch",
     "server": "nodemon server.js",
     "client": "npm start --prefix poker-front-end",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client-prod": "npm install --prefix poker-front-end && npm run build --prefix poker-front-end"
   },
   "repository": {
     "type": "git",
