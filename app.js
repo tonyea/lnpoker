@@ -23,15 +23,16 @@ app.use(passport.initialize());
 require("./passport")(passport);
 
 // get request to homepage
-app.get("/", (req, res) => {
-  res.status(200).send("Lightning Poker - Bitcoin on the Lightning Network");
-});
+// app.get("/", (req, res) => {
+//   res.status(200).send("Lightning Poker - Bitcoin on the Lightning Network");
+// });
 
 // connect express to route file
 app.use("/api/users", users);
 app.use("/api/game", game);
 
 // serve static assets if in production
+console.log(process.env.NODE_ENV);
 if (process.env.NODE_ENV === "production") {
   // set static folder
   app.use(express.static("poker-front-end/build"));
