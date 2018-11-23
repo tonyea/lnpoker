@@ -18,8 +18,9 @@ const validateLoginInput = require("../../validation/login");
 const passport = require("passport");
 
 // connection to Lightning Node
-const lnrpc = require("../../ln-grpc");
-
+if (process.env.NODE_ENV !== "test") {
+  const lnrpc = require("../../ln-grpc");
+}
 // @route   POST api/users/register
 // @desc    Register user
 // @access  Public
