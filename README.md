@@ -1,7 +1,7 @@
 ## A Texas Holdem game server (Node) and web client (React)
 
 A Texas Holdem game server and web client built to test out the Bitcoin Lightning Network. Some notable features
-are real-time game-play, multiple game rooms and support up to 5 players per room.
+are real-time game-play, multiple game rooms and support up to 5 players per room. Demo: [lightningpoker.club](lightningpoker.club)
 
 ### Game Features
 
