@@ -10,6 +10,7 @@ are real-time game-play, multiple game rooms and support up to 5 players per roo
 - Real-time game interaction between clients via web sockets.
 - Robust game records are stored in a POSTGRES DB which include each player action and along with game results.
 - A basic React based web client server.
+- Deposits and Withdrawals of Bitcoin
 
 ## Instructions
 
@@ -18,6 +19,7 @@ are real-time game-play, multiple game rooms and support up to 5 players per roo
 1. Node >=8.12.0
 2. NPM
 3. Postgres >=10.5 # https://www.postgresql.org/download/linux/ubuntu/
+4. LND >=0.5 #https://github.com/lightningnetwork/lnd
 
 ### DB Setup
 
