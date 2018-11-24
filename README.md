@@ -79,7 +79,7 @@ npm install
 npm run client-install # package.json command that installs dependencies in client folder
 ```
 
-2. Create a .env file in root folder of repo
+2. Create a .env file in root folder of repo and input connection credentials for your lightning node. See https://dev.lightning.community/guides/installation/
 
 ```
 PORT=5000
@@ -91,6 +91,11 @@ PGDATABASE=lnpoker
 PGTESTDATABASE=lnpokertest
 PGPASSWORD=passwordcreatedearlier
 PGPORT=5432 # in psql as lnpoker, check /conninfo to find port if unsure
+LNPOKER_MACAROON=/location/of/admin.macaroon
+LNPOKER_TLS=/home/.lnd/tls.cert # this is the default, change as per your lightning settings
+LNPOKER_HOST=localhost:10001 # depends on which port your node is running
+GRPC_SSL_CIPHER_SUITES=HIGH+ECDSA
+NODEURI=03e61c6a47778c4521d96b059bd782b15eb3d8c165306587ceae08014119bbc4cc@localhost:10011 # use own node uri. Get by running command lncli getinfo on node
 ```
 
 3. Run tests and check if DB connection worked
