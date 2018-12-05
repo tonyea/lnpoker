@@ -12,6 +12,34 @@ are real-time game-play, multiple game rooms and support up to 5 players per roo
 - A basic React based web client server.
 - Deposits and Withdrawals of Bitcoin
 
+### Screenshots
+#### Start screen
+![1 Start screen](https://i.imgur.com/Z2miFpx.png)
+#### Create new game with a custom buy-in
+![2 Create new game with a custom buy-in](https://i.imgur.com/XGegHNu.png)
+#### Get payment request for buy-in invoice (open channel if routing failures occur)
+![3 Get payment request for buy-in invoice](https://i.imgur.com/1uzRBwP.png)
+#### Pay invoice
+![4 pay invoice](https://i.imgur.com/BQdd82g.png)
+#### New game screen
+![5 New game screen](https://i.imgur.com/EXZWXVJ.png)
+#### New round with 2 users 
+![6 New round with 2 users](https://i.imgur.com/VpUbDNV.png)
+#### Flop round screen
+![7 Flop round screen](https://i.imgur.com/6l41ICi.png)
+#### End round screen
+![8 End round screen](https://i.imgur.com/CYxmmfv.png)
+#### End game screen
+![9 End game screen](https://i.imgur.com/dfnaBum.png)
+#### Click on balance amount to withdraw funds
+![10 Click on balance amount to withdraw funds](https://i.imgur.com/m63osHi.png)
+#### Copy payment request
+![11 Copy payment request](https://i.imgur.com/S1jf6nJ.png)
+#### Paste payment request for withdrawal
+![12 Paste payment request for withdrawal](https://i.imgur.com/BCiWBio.png)
+#### Withdrawal is being processed
+![13 Withdrawal is being processed](https://i.imgur.com/b5S5pkX.png)
+
 ## Instructions
 
 ### Architecture dependencies
